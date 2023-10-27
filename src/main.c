@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -26,6 +27,12 @@ static uint32_t shader = 0;
 static float proj_mat[4][4] = {{0}};
 static float view_mat[4][4] = {{0}};
 
+static double view_angle[2] = {0, 0};
+static float focus[3] = {0, 0, 0};
+static float zoom = 3.0f;
+
+static int cull_backface = 0;
+
 static void init(void)
 {
 	glfwInit();
@@ -47,8 +54,6 @@ static void init(void)
 
 	shader = shader_create("res/base.vert", "res/base.frag");
 	mat4_perspective(proj_mat, 90.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
-	mat4_lookat(view_mat, (float[3]){0, 3, 0},
-	     (float[3]){0, 0, 0}, (float[3]){0, 0, 1});
 }
 
 static void panel_left(void)
@@ -79,7 +84,67 @@ static void panel_left(void)
 	if(nk_button_label(ctx, "Load Object")) {
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	}
+
+	nk_checkbox_label(ctx, "Backface Culling", &cull_backface);
+
 	nk_end(ctx);
+}
+
+static void draw(void)
+{
+	nk_glfw3_new_frame(&glfw);
+	panel_left();
+
+	if(cull_backface) {
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		glFrontFace(GL_CCW);
+	} else {
+		glDisable(GL_CULL_FACE);
+	}
+
+	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	mat4_lookat(view_mat,
+	     (float[3]){
+		sinf(view_angle[0]) * cosf(view_angle[1]) * zoom,
+		cosf(view_angle[0]) * cosf(view_angle[1]) * zoom,
+		sinf(view_angle[1]) * zoom,
+	     }, focus, (float[3]){0, 0, 1});
+
+	if(test_obj) {
+		mesh_draw(test_obj->mesh, shader, proj_mat, view_mat);
+	}
+
+	nk_glfw3_render(&glfw, NK_ANTI_ALIASING_ON,
+			CONF_VERT_BUF_MAX, CONF_ELEM_BUF_MAX);
+	glfwSwapBuffers(window);
+}
+
+static void mouse_input(void)
+{
+	static double mouse_last[2] = {0, 0};
+	if(!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)) {
+		glfwGetCursorPos(window, mouse_last + 0, mouse_last + 1);
+		return;
+	}
+
+	double mouse_now[2];
+	glfwGetCursorPos(window, mouse_now + 0, mouse_now + 1);
+	double mouse_delta[2] = {
+		mouse_now[0] - mouse_last[0],
+		mouse_now[1] - mouse_last[1],
+	};
+	mouse_last[0] = mouse_now[0];
+	mouse_last[1] = mouse_now[1];
+	view_angle[0] -= mouse_delta[0] * 0.02f;
+	view_angle[1] += mouse_delta[1] * 0.02f;
+	if(view_angle[1] < -1.5f)
+		view_angle[1] = -1.5f;
+
+	if(view_angle[1] > 1.5f)
+		view_angle[1] = 1.5f;
 }
 
 static void terminate(void)
@@ -93,22 +158,8 @@ int main(void)
 
 	while(!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
-		if(glfwGetKey(window, GLFW_KEY_ESCAPE))
-			glfwSetWindowShouldClose(window, GLFW_TRUE);
-
-		nk_glfw3_new_frame(&glfw);
-		panel_left();
-
-		glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		if(test_obj) {
-			mesh_draw(test_obj->mesh, shader, proj_mat, view_mat);
-		}
-
-		nk_glfw3_render(&glfw, NK_ANTI_ALIASING_ON,
-				CONF_VERT_BUF_MAX, CONF_ELEM_BUF_MAX);
-		glfwSwapBuffers(window);
+		mouse_input();
+		draw();
 	}
 
 	terminate();
