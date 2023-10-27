@@ -24,6 +24,21 @@
       "-g3",
       "-c",
       "-Iinclude",
+      "src/mat4.c"
+    ],
+    "directory": "/home/rosie/dev/opengl/united64",
+    "file": "/home/rosie/dev/opengl/united64/src/mat4.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-g3",
+      "-c",
+      "-Iinclude",
       "src/mesh.c"
     ],
     "directory": "/home/rosie/dev/opengl/united64",
@@ -43,5 +58,35 @@
     ],
     "directory": "/home/rosie/dev/opengl/united64",
     "file": "/home/rosie/dev/opengl/united64/src/object.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-g3",
+      "-c",
+      "-Iinclude",
+      "src/shader.c"
+    ],
+    "directory": "/home/rosie/dev/opengl/united64",
+    "file": "/home/rosie/dev/opengl/united64/src/shader.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-g3",
+      "-c",
+      "-Iinclude",
+      "src/vector.c"
+    ],
+    "directory": "/home/rosie/dev/opengl/united64",
+    "file": "/home/rosie/dev/opengl/united64/src/vector.c"
   }
 ]

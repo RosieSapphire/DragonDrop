@@ -10,8 +10,10 @@
 #include "nuklear.h"
 #include "nuklear_glfw_gl3.h"
 
-#include "object.h"
 #include "config.h"
+#include "object.h"
+#include "shader.h"
+#include "mat4.h"
 
 static GLFWwindow *window = NULL;
 static struct nk_context *ctx = NULL;
@@ -20,6 +22,9 @@ static struct nk_glfw glfw = {0};
 static char load_buf[CONF_LOAD_BUF_MAX];
 
 static object_t *test_obj = NULL;
+static uint32_t shader = 0;
+static float proj_mat[4][4] = {{0}};
+static float view_mat[4][4] = {{0}};
 
 static void init(void)
 {
@@ -39,6 +44,11 @@ static void init(void)
 	struct nk_font_atlas *atlas;
 	nk_glfw3_font_stash_begin(&glfw, &atlas);
 	nk_glfw3_font_stash_end(&glfw);
+
+	shader = shader_create("res/base.vert", "res/base.frag");
+	mat4_perspective(proj_mat, 90.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
+	mat4_lookat(view_mat, (float[3]){0, 3, 0},
+	     (float[3]){0, 0, 0}, (float[3]){0, 0, 1});
 }
 
 static void panel_left(void)
@@ -72,25 +82,6 @@ static void panel_left(void)
 	nk_end(ctx);
 }
 
-static void draw(void)
-{
-	nk_glfw3_new_frame(&glfw);
-	panel_left();
-
-	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	nk_glfw3_render(&glfw, NK_ANTI_ALIASING_ON,
-			CONF_VERT_BUF_MAX, CONF_ELEM_BUF_MAX);
-	glfwSwapBuffers(window);
-}
-
-static void input(void)
-{
-	glfwPollEvents();
-	if(glfwGetKey(window, GLFW_KEY_ESCAPE))
-		glfwSetWindowShouldClose(window, GLFW_TRUE);
-}
-
 static void terminate(void)
 {
 	glfwTerminate();
@@ -101,8 +92,23 @@ int main(void)
 	init();
 
 	while(!glfwWindowShouldClose(window)) {
-		draw();
-		input();
+		glfwPollEvents();
+		if(glfwGetKey(window, GLFW_KEY_ESCAPE))
+			glfwSetWindowShouldClose(window, GLFW_TRUE);
+
+		nk_glfw3_new_frame(&glfw);
+		panel_left();
+
+		glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		if(test_obj) {
+			mesh_draw(test_obj->mesh, shader, proj_mat, view_mat);
+		}
+
+		nk_glfw3_render(&glfw, NK_ANTI_ALIASING_ON,
+				CONF_VERT_BUF_MAX, CONF_ELEM_BUF_MAX);
+		glfwSwapBuffers(window);
 	}
 
 	terminate();

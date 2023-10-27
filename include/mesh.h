@@ -13,6 +13,8 @@ typedef struct {
 } mesh_t;
 
 mesh_t *mesh_create_tri(void);
+void mesh_draw(const mesh_t *m, const uint32_t shader,
+	       const float proj[4][4], const float view[4][4]);
 void mesh_destroy(mesh_t *m);
 
 #endif /* ENGINE_MESH_H_ */
