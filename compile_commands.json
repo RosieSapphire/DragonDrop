@@ -5,6 +5,7 @@
       "-std=c99",
       "-Wall",
       "-Wextra",
+      "-Werror",
       "-g3",
       "-c",
       "-Iinclude",
@@ -12,5 +13,35 @@
     ],
     "directory": "/home/rosie/dev/opengl/united64",
     "file": "/home/rosie/dev/opengl/united64/src/main.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-g3",
+      "-c",
+      "-Iinclude",
+      "src/mesh.c"
+    ],
+    "directory": "/home/rosie/dev/opengl/united64",
+    "file": "/home/rosie/dev/opengl/united64/src/mesh.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-g3",
+      "-c",
+      "-Iinclude",
+      "src/object.c"
+    ],
+    "directory": "/home/rosie/dev/opengl/united64",
+    "file": "/home/rosie/dev/opengl/united64/src/object.c"
   }
 ]

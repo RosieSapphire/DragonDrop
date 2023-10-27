@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c99 -Wall -Wextra -g3
+CFLAGS=-std=c99 -Wall -Wextra -Werror -g3
 INC=-Iinclude
 LIB=$(shell pkg-config --libs glfw3) $(shell pkg-config --libs glew) -lm
 

@@ -10,11 +10,16 @@
 #include "nuklear.h"
 #include "nuklear_glfw_gl3.h"
 
+#include "object.h"
 #include "config.h"
 
 static GLFWwindow *window = NULL;
 static struct nk_context *ctx = NULL;
 static struct nk_glfw glfw = {0};
+
+static char load_buf[CONF_LOAD_BUF_MAX];
+
+static object_t *test_obj = NULL;
 
 static void init(void)
 {
@@ -36,47 +41,34 @@ static void init(void)
 	nk_glfw3_font_stash_end(&glfw);
 }
 
-static void panel_left_tree(void)
-{
-	if(!nk_tree_push(ctx, NK_TREE_NODE, "Test Tree", NK_WINDOW_IS_COLLAPSED))
-		return;
-}
-
-static void panel_left_group(void)
-{
-	if(!nk_group_begin(ctx, "Test Group", NK_WINDOW_TITLE))
-		return;
-
-	nk_group_end(ctx);
-}
-
 static void panel_left(void)
 {
 	if(!nk_begin(ctx, "Left Panel",
-	      nk_rect(0, 0, CONF_WIDTH >> 3, CONF_HEIGHT),
-	      NK_WINDOW_BORDER | NK_WINDOW_TITLE))
-		return;
-
-	nk_layout_row_dynamic(ctx, 30, 2);
-	(void)nk_button_label(ctx, "Test Button 1");
-	(void)nk_button_label(ctx, "Test Button 2");
-
-	nk_layout_row_dynamic(ctx, 60, 1);
-	panel_left_group();
-	nk_end(ctx);
-}
-
-static void panel_right(void)
-{
-	if(!nk_begin(ctx, "Right Panel",
-	      nk_rect(CONF_WIDTH - (CONF_WIDTH >> 3),
-	       0, CONF_WIDTH >> 3, CONF_HEIGHT),
+	      nk_rect(0, 0, 210, CONF_HEIGHT),
 	      NK_WINDOW_BORDER | NK_WINDOW_TITLE))
 		return;
 
 	nk_layout_row_dynamic(ctx, 30, 1);
-	(void)nk_button_label(ctx, "Test Button 3");
-	(void)nk_button_label(ctx, "Test Button 4");
+
+	if(nk_button_label(ctx, "Generate Triangle")) {
+		if(!test_obj)
+			test_obj = object_gen_tri();
+	}
+
+	if(nk_button_label(ctx, "Destroy Triangle")) {
+		if(test_obj) {
+			object_destroy(test_obj);
+			test_obj = NULL;
+		}
+	}
+
+	/* loading object */
+	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, load_buf,
+				CONF_LOAD_BUF_MAX,
+				nk_filter_default);
+	if(nk_button_label(ctx, "Load Object")) {
+		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
+	}
 	nk_end(ctx);
 }
 
@@ -84,7 +76,6 @@ static void draw(void)
 {
 	nk_glfw3_new_frame(&glfw);
 	panel_left();
-	panel_right();
 
 	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
