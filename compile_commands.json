@@ -1,0 +1,16 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-g3",
+      "-c",
+      "-Iinclude",
+      "src/main.c"
+    ],
+    "directory": "/home/rosie/dev/opengl/united64",
+    "file": "/home/rosie/dev/opengl/united64/src/main.c"
+  }
+]
