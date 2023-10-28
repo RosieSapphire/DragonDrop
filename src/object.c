@@ -23,7 +23,7 @@ object_t *object_create_file(const char *path)
 	const int flags = aiProcess_Triangulate | aiProcess_OptimizeMeshes |
 		aiProcess_GenBoundingBoxes | aiProcess_ImproveCacheLocality |
 		aiProcess_JoinIdenticalVertices |
-		aiProcess_RemoveRedundantMaterials;
+		aiProcess_RemoveRedundantMaterials | aiProcess_FlipWindingOrder;
 	const struct aiScene *scene = aiImportFile(path, flags);
 	if(!scene) {
 		fprintf(stderr, "Failed to open object scene '%s'\n", path);

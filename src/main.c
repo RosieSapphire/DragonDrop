@@ -55,9 +55,6 @@ static void init(void)
 
 	shader = shader_create("res/base.vert", "res/base.frag");
 	mat4_perspective(proj_mat, 90.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
-
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
 }
 
 static void panel_props(void)
@@ -103,15 +100,20 @@ static void draw(void)
 		glDisable(GL_CULL_FACE);
 	}
 
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
 	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	mat4_lookat(view_mat,
 	     (float[3]){
-		sinf(view_angle[0]) * cosf(view_angle[1]) * zoom,
 		cosf(view_angle[0]) * cosf(view_angle[1]) * zoom,
-		sinf(view_angle[1]) * zoom,
+		sinf(view_angle[0]) * cosf(view_angle[1]) * zoom,
+	     	sinf(view_angle[1]) * zoom,
 	     }, focus, (float[3]){0, 0, 1});
+
+	printf("%f\n", view_angle[1]);
 
 	if(test_obj) {
 		mesh_draw(test_obj->mesh, shader, proj_mat, view_mat);
