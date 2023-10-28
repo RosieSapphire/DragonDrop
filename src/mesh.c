@@ -1,4 +1,5 @@
 #include <malloc.h>
+#include <string.h>
 #include <GL/glew.h>
 
 #include "mesh.h"
@@ -67,6 +68,49 @@ mesh_t *mesh_create_tri(void)
 
 	glBindVertexArray(0);
 
+	return m;
+}
+
+mesh_t *mesh_create_data(const uint16_t num_verts, const uint16_t num_indis,
+			 const vertex_t *verts, const uint16_t *indis)
+{
+	mesh_t *m = malloc(sizeof(mesh_t));
+
+	m->num_verts = num_verts;
+	const size_t verts_size = sizeof(vertex_t) * num_verts;
+	m->verts = malloc(verts_size);
+	memcpy(m->verts, verts, verts_size);
+
+	m->num_indis = num_indis;
+	const size_t indis_size = sizeof(uint16_t) * num_indis;
+	m->indis = malloc(indis_size);
+	memcpy(m->indis, indis, indis_size);
+
+	glGenVertexArrays(1, &m->vao);
+	glBindVertexArray(m->vao);
+	
+	glGenBuffers(1, &m->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, m->vbo);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+		       sizeof(vertex_t), (void *)offsetof(vertex_t, pos));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+		       sizeof(vertex_t), (void *)offsetof(vertex_t, uv));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
+		       sizeof(vertex_t), (void *)offsetof(vertex_t, norm));
+	glBufferData(GL_ARRAY_BUFFER,
+	      sizeof(vertex_t) * m->num_verts, m->verts, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glGenBuffers(1, &m->ebo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m->ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+	      sizeof(uint16_t) * m->num_indis, m->indis, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0);
 	return m;
 }
 

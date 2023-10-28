@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include "config.h"
 #include "mesh.h"
 
 enum object_flags {
@@ -11,12 +12,13 @@ enum object_flags {
 };
 
 typedef struct {
+	char name[CONF_NAME_MAX];
 	mesh_t *mesh;
 	enum object_flags flags;
 } object_t;
 
-object_t *object_gen_tri(void);
-// object_t *object_load_file(const char *path);
+object_t *object_create_tri(void);
+object_t *object_create_file(const char *path);
 void object_destroy(object_t *o);
 
 #endif /* OBJECT_H_ */

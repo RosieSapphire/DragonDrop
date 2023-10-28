@@ -1,7 +1,8 @@
 CC=gcc
 CFLAGS=-std=c99 -Wall -Wextra -Werror -g3
 INC=-Iinclude
-LIB=$(shell pkg-config --libs glfw3) $(shell pkg-config --libs glew) -lm
+LIB=$(shell pkg-config --libs glfw3) $(shell pkg-config --libs glew) -lm \
+    $(shell pkg-config --libs assimp)
 
 SRC=$(wildcard src/*.c)
 OBJ=$(patsubst src/%.c, %.o, $(SRC))

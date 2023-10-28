@@ -55,38 +55,37 @@ static void init(void)
 
 	shader = shader_create("res/base.vert", "res/base.frag");
 	mat4_perspective(proj_mat, 90.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
 }
 
-static void panel_left(void)
+static void panel_props(void)
 {
-	if(!nk_begin(ctx, "Left Panel",
-	      nk_rect(0, 0, 210, CONF_HEIGHT),
+	char label[CONF_NAME_MAX];
+	sprintf(label, "%s", test_obj->name);
+
+	if(!nk_begin(ctx, label, nk_rect(0, 0, 210, CONF_HEIGHT),
 	      NK_WINDOW_BORDER | NK_WINDOW_TITLE))
 		return;
 
 	nk_layout_row_dynamic(ctx, 30, 1);
 
-	if(nk_button_label(ctx, "Generate Triangle")) {
-		if(!test_obj)
-			test_obj = object_gen_tri();
-	}
-
-	if(nk_button_label(ctx, "Destroy Triangle")) {
-		if(test_obj) {
-			object_destroy(test_obj);
-			test_obj = NULL;
-		}
-	}
-
 	/* loading object */
 	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, load_buf,
 				CONF_LOAD_BUF_MAX,
 				nk_filter_default);
-	if(nk_button_label(ctx, "Load Object")) {
+	if(nk_button_label(ctx, "Load Object") && !test_obj) {
+		test_obj = object_create_file(load_buf);
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	}
 
 	nk_checkbox_label(ctx, "Backface Culling", &cull_backface);
+
+	if(nk_button_label(ctx, "Destroy Selected") && test_obj) {
+		object_destroy(test_obj);
+		test_obj = NULL;
+	}
 
 	nk_end(ctx);
 }
@@ -94,7 +93,7 @@ static void panel_left(void)
 static void draw(void)
 {
 	nk_glfw3_new_frame(&glfw);
-	panel_left();
+	panel_props();
 
 	if(cull_backface) {
 		glEnable(GL_CULL_FACE);
@@ -126,22 +125,34 @@ static void draw(void)
 static void mouse_input(void)
 {
 	static double mouse_last[2] = {0, 0};
-	if(!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)) {
-		glfwGetCursorPos(window, mouse_last + 0, mouse_last + 1);
+
+	/* orbiting */
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)) {
+		double mouse_now[2];
+		glfwGetCursorPos(window, mouse_now + 0, mouse_now + 1);
+		double mouse_delta[2] = {
+			mouse_now[0] - mouse_last[0],
+			mouse_now[1] - mouse_last[1],
+		};
+		mouse_last[0] = mouse_now[0];
+		mouse_last[1] = mouse_now[1];
+		view_angle[0] -= mouse_delta[0] * 0.02f;
+		view_angle[1] += mouse_delta[1] * 0.02f;
+		view_angle[1] = clampf(view_angle[1], -1.5f, 1.5f);
 		return;
 	}
 
-	double mouse_now[2];
-	glfwGetCursorPos(window, mouse_now + 0, mouse_now + 1);
-	double mouse_delta[2] = {
-		mouse_now[0] - mouse_last[0],
-		mouse_now[1] - mouse_last[1],
-	};
-	mouse_last[0] = mouse_now[0];
-	mouse_last[1] = mouse_now[1];
-	view_angle[0] -= mouse_delta[0] * 0.02f;
-	view_angle[1] += mouse_delta[1] * 0.02f;
-	view_angle[1] = clampf(view_angle[1], -1.5f, 1.5f);
+	/* zooming */
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE)) {
+		double mouse_y_now;
+		glfwGetCursorPos(window, NULL, &mouse_y_now);
+		double mouse_y_delta = mouse_y_now - mouse_last[1];
+		mouse_last[1] = mouse_y_now;
+		zoom += mouse_y_delta * 0.01f;
+		return;
+	}
+
+	glfwGetCursorPos(window, mouse_last + 0, mouse_last + 1);
 }
 
 static void terminate(void)

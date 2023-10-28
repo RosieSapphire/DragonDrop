@@ -6,6 +6,8 @@
 #define CONF_ASPECT ((float)CONF_WIDTH / (float)CONF_HEIGHT)
 #define CONF_NAME "United64"
 
+#define CONF_NAME_MAX 128
+
 #define CONF_NEAR 0.1f
 #define CONF_FAR 64.0f
 
