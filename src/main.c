@@ -12,6 +12,7 @@
 #include "nuklear_glfw_gl3.h"
 
 #include "config.h"
+#include "util.h"
 #include "object.h"
 #include "shader.h"
 #include "mat4.h"
@@ -140,11 +141,7 @@ static void mouse_input(void)
 	mouse_last[1] = mouse_now[1];
 	view_angle[0] -= mouse_delta[0] * 0.02f;
 	view_angle[1] += mouse_delta[1] * 0.02f;
-	if(view_angle[1] < -1.5f)
-		view_angle[1] = -1.5f;
-
-	if(view_angle[1] > 1.5f)
-		view_angle[1] = 1.5f;
+	view_angle[1] = clampf(view_angle[1], -1.5f, 1.5f);
 }
 
 static void terminate(void)
