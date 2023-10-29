@@ -54,7 +54,10 @@ static void init(void)
 	nk_glfw3_font_stash_end(&glfw);
 
 	shader = shader_create("res/base.vert", "res/base.frag");
-	mat4_perspective(proj_mat, 90.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
+	mat4_perspective(proj_mat, 75.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
+
+	strncpy(load_buf, "pistol.glb", CONF_LOAD_BUF_MAX);
+	// memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 }
 
 static void panel_props(void)
@@ -106,14 +109,15 @@ static void draw(void)
 	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	mat4_lookat(view_mat,
-	     (float[3]){
-		cosf(view_angle[0]) * cosf(view_angle[1]) * zoom,
-		sinf(view_angle[0]) * cosf(view_angle[1]) * zoom,
+	const float cosv1 = cosf(view_angle[1]);
+	float eye[3] = {
+		cosf(view_angle[0]) * cosv1 * zoom,
+		sinf(view_angle[0]) * cosv1 * zoom,
 	     	sinf(view_angle[1]) * zoom,
-	     }, focus, (float[3]){0, 0, 1});
+	};
+	mat4_lookat(view_mat, eye, focus, (float[3]){0, 0, 1});
 
-	printf("%f\n", view_angle[1]);
+	printf("%f\n", cosf(view_angle[1]));
 
 	if(test_obj) {
 		mesh_draw(test_obj->mesh, shader, proj_mat, view_mat);
@@ -138,7 +142,7 @@ static void mouse_input(void)
 		};
 		mouse_last[0] = mouse_now[0];
 		mouse_last[1] = mouse_now[1];
-		view_angle[0] -= mouse_delta[0] * 0.02f;
+		view_angle[0] += mouse_delta[0] * 0.02f;
 		view_angle[1] += mouse_delta[1] * 0.02f;
 		view_angle[1] = clampf(view_angle[1], -1.5f, 1.5f);
 		return;
@@ -151,6 +155,7 @@ static void mouse_input(void)
 		double mouse_y_delta = mouse_y_now - mouse_last[1];
 		mouse_last[1] = mouse_y_now;
 		zoom += mouse_y_delta * 0.01f;
+		zoom = fmaxf(zoom, 0);
 		return;
 	}
 

@@ -130,35 +130,35 @@ void mat4_from_quat(float q[4], float out[4][4])
 	out[3][3] = 1.0f;
 }                    
                      
-void mat4_lookat(float m[4][4], float eye[3], float focus[3], float up[3])
+void mat4_lookat(float m[4][4], float eye[3], float focus[3], float gup[3])
 {
 	mat4_zero(m);
 
-	float f[3], s[3], u[3];
-	vector_subtract(focus, eye, f, 3);
-	vector_normalize(f, 3);
-	vector3_cross(up, f, s);
-	vector_normalize(s, 3);
-	vector3_cross(f, s, u);
+	float front[3], side[3], up[3];
+	vector_subtract(focus, eye, front, 3);
+	vector_normalize(front, 3);
+	vector3_cross(gup, front, side);
+	vector_normalize(side, 3);
+	vector3_cross(front, side, up);
 
-	m[0][0] =  s[0];
-	m[0][1] =  u[0];
-	m[0][2] = -f[0];
-	m[0][3] = 0.0f;
+	m[0][0] =   side[0];
+	m[0][1] =     up[0];
+	m[0][2] = -front[0];
+	m[0][3] =  0.0f;
 
-	m[1][0] =  s[1];
-	m[1][1] =  u[1];
-	m[1][2] = -f[1];
-	m[1][3] = 0.0f;
+	m[1][0] =   side[1];
+	m[1][1] =     up[1];
+	m[1][2] = -front[1];
+	m[1][3] =  0.0f;
 
-	m[2][0] = s[2];
-	m[2][1] = u[2];
-	m[2][2] = f[2];
-	m[2][3] = 0.0f;
+	m[2][0] =   side[2];
+	m[2][1] =     up[2];
+	m[2][2] = -front[2];
+	m[2][3] =  0.0f;
 
-	m[3][0] = s[0] * eye[0] + s[1] * eye[1] + s[2] * eye[2];
-	m[3][1] = u[0] * eye[0] + u[1] * eye[1] + u[2] * eye[2];
-	m[3][2] = f[0] * eye[0] + f[1] * eye[1] + f[2] * eye[2];
+	m[3][0] = vector_dot( side, eye, 3);
+	m[3][1] = vector_dot(   up, eye, 3);
+	m[3][2] = vector_dot(front, eye, 3);
 	m[3][3] = 1.0f;
 }
 
