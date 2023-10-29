@@ -6,15 +6,17 @@
 
 #include "config.h"
 #include "mesh.h"
+#include "aabb.h"
 
 enum object_flags {
-	OBJ_IS_ACTIVE  = 0b00000001,
+	OBJ_HAS_COLLISION  = 0b00000001,
 	OBJ_IS_VISIBLE = 0b00000010,
 };
 
 typedef struct {
 	char name[CONF_NAME_MAX];
 	mesh_t *mesh;
+	aabb_t aabb;
 	float trans[4][4];
 	enum object_flags flags;
 } object_t;

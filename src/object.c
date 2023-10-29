@@ -29,8 +29,9 @@ object_t *object_create_tri(void)
 	object_t *obj = malloc(sizeof(object_t));
 	strncpy(obj->name, "Triangle", CONF_NAME_MAX);
 	obj->mesh = mesh_create_tri();
+	obj->aabb = aabb_from_mesh(obj->mesh);
 	mat4_identity(obj->trans);
-	obj->flags = OBJ_IS_ACTIVE | OBJ_IS_VISIBLE;
+	obj->flags = OBJ_HAS_COLLISION | OBJ_IS_VISIBLE;
 	object_selected = obj;
 
 	return obj;
@@ -39,7 +40,7 @@ object_t *object_create_tri(void)
 object_t *object_create_file(const char *path)
 {
 	const int flags = aiProcess_Triangulate | aiProcess_OptimizeMeshes |
-		aiProcess_GenBoundingBoxes | aiProcess_ImproveCacheLocality |
+		aiProcess_ImproveCacheLocality |
 		aiProcess_JoinIdenticalVertices |
 		aiProcess_RemoveRedundantMaterials | aiProcess_FlipWindingOrder;
 	const struct aiScene *scene = aiImportFile(path, flags);
@@ -57,7 +58,7 @@ object_t *object_create_file(const char *path)
 	printf("Opened object scene '%s'\n", path);
 
 	obj = malloc(sizeof(object_t));
-	obj->flags = OBJ_IS_ACTIVE | OBJ_IS_VISIBLE;
+	obj->flags = OBJ_HAS_COLLISION | OBJ_IS_VISIBLE;
 
 	const struct aiMesh *aimesh = scene->mMeshes[0];
 	strncpy(obj->name, aimesh->mName.data, CONF_NAME_MAX);
@@ -86,6 +87,7 @@ object_t *object_create_file(const char *path)
 	}
 
 	obj->mesh = mesh_create_data(num_verts, num_indis, verts, indis);
+	obj->aabb = aabb_from_mesh(obj->mesh);
 	mat4_identity(obj->trans);
 	object_selected = obj;
 

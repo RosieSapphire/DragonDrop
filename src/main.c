@@ -18,6 +18,7 @@
 #include "scene.h"
 #include "object.h"
 #include "mat4.h"
+#include "aabb.h"
 
 static GLFWwindow *window = NULL;
 static struct nk_context *ctx = NULL;
@@ -82,6 +83,8 @@ static void init(void)
 		4, 5,
 	};
 	axis_mesh = mesh_create_data(6, 6, axis_verts, axis_indis);
+
+	aabb_init();
 }
 
 static void panel_props(void)
@@ -97,6 +100,7 @@ static void panel_props(void)
 	/* loading object */
 	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, load_buf,
 				CONF_LOAD_BUF_MAX, nk_filter_default);
+	/* TODO: Make sure to add instancing at some point */
 	if(nk_button_label(ctx, "Load Object")) {
 		scene_object_add(&scene, load_buf);
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
@@ -104,16 +108,23 @@ static void panel_props(void)
 
 	if(object_selected) {
 		nk_layout_row_dynamic(ctx, 30, 4);
-		nk_label(ctx, "Position", NK_LEFT);
+		nk_label(ctx, "Position", NK_TEXT_LEFT);
 		nk_property_float(ctx, "X", -INFINITY,
 		    &object_selected->trans[3][0], INFINITY, 0.001f, 0.001f);
 		nk_property_float(ctx, "Y", -INFINITY,
 		    &object_selected->trans[3][1], INFINITY, 0.001f, 0.001f);
 		nk_property_float(ctx, "Z", -INFINITY,
 		    &object_selected->trans[3][2], INFINITY, 0.001f, 0.001f);
+
+		nk_layout_row_dynamic(ctx, 30, 1);
+		nk_checkbox_flags_label(ctx, "Has Collision",
+			  &object_selected->flags, OBJ_HAS_COLLISION);
+		nk_checkbox_flags_label(ctx, "Is Visible",
+			  &object_selected->flags, OBJ_IS_VISIBLE);
 	}
 
-	nk_layout_row_dynamic(ctx, 30, 1);
+
+	nk_label(ctx, "Global", NK_TEXT_LEFT);
 	nk_checkbox_label(ctx, "Backface Culling", &cull_backface);
 	nk_end(ctx);
 }
@@ -187,6 +198,7 @@ static void draw(void)
 		object_t **obj = scene.objects + i;
 		object_draw(*obj, shader, proj_mat,
 	      view_mat, object_selected == *obj);
+		aabb_draw((*obj)->aabb, proj_mat, view_mat, (*obj)->trans);
 	}
 
 	nk_glfw3_render(&glfw, NK_ANTI_ALIASING_ON,
