@@ -6,7 +6,7 @@ LIB=$(shell pkg-config --libs glfw3) $(shell pkg-config --libs glew) -lm \
 
 SRC=$(wildcard src/*.c)
 OBJ=$(patsubst src/%.c, %.o, $(SRC))
-BIN=united64
+BIN=dragondrop
 
 default: $(BIN)
 
