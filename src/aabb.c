@@ -29,7 +29,7 @@ void aabb_init(void)
 
 	glBindVertexArray(0);
 
-	shader = shader_create("res/aabb.vert", "res/aabb.frag");
+	shader = shader_create("res/shaders/aabb.vert", "res/shaders/aabb.frag");
 }
 
 aabb_t aabb_from_mesh(const mesh_t *mesh)

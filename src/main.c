@@ -59,15 +59,16 @@ static void init(void)
 	nk_glfw3_font_stash_begin(&glfw, &atlas);
 	nk_glfw3_font_stash_end(&glfw);
 
-	shader = shader_create("res/base.vert", "res/base.frag");
+	shader = shader_create("res/shaders/base.vert", "res/shaders/base.frag");
 	mat4_perspective(proj_mat, 75.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
 
-	strncpy(load_buf, "pistol.glb", CONF_LOAD_BUF_MAX);
+	strncpy(load_buf, "res/models/pistol.glb", CONF_LOAD_BUF_MAX);
 	// memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	
 	scene_init(&scene);
 
-	axis_shader = shader_create("res/axis.vert", "res/axis.frag");
+	axis_shader =
+		shader_create("res/shaders/axis.vert", "res/shaders/axis.frag");
 	const vertex_t axis_verts[6] = {
 		{{0, 0, 0}, {0, 0}, {1, 0, 0}},
 		{{1, 0, 0}, {0, 0}, {1, 0, 0}},
