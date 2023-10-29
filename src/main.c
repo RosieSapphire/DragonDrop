@@ -27,6 +27,7 @@ static char load_buf[CONF_LOAD_BUF_MAX];
 
 static scene_t scene;
 static uint32_t shader = 0;
+static uint32_t axis_shader = 0;
 static float proj_mat[4][4] = {{0}};
 static float view_mat[4][4] = {{0}};
 
@@ -35,6 +36,8 @@ static float focus[3] = {0, 0, 0};
 static float zoom = 3.0f;
 
 static int cull_backface = 0;
+
+static mesh_t *axis_mesh = NULL;
 
 static void init(void)
 {
@@ -62,11 +65,28 @@ static void init(void)
 	// memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	
 	scene_init(&scene);
+
+	axis_shader = shader_create("res/axis.vert", "res/axis.frag");
+	const vertex_t axis_verts[6] = {
+		{{0, 0, 0}, {0, 0}, {1, 0, 0}},
+		{{1, 0, 0}, {0, 0}, {1, 0, 0}},
+		{{0, 0, 0}, {0, 0}, {0, 1, 0}},
+		{{0, 1, 0}, {0, 0}, {0, 1, 0}},
+		{{0, 0, 0}, {0, 0}, {0, 0, 1}},
+		{{0, 0, 1}, {0, 0}, {0, 0, 1}},
+	};
+
+	const uint16_t axis_indis[6] = {
+		0, 1,
+		2, 3,
+		4, 5,
+	};
+	axis_mesh = mesh_create_data(6, 6, axis_verts, axis_indis);
 }
 
 static void panel_props(void)
 {
-	static const int width = 210;
+	static const int width = 420;
 	if(!nk_begin(ctx, object_selected ? object_selected->name : "null",
 	      nk_rect(0, 0, width, CONF_HEIGHT),
 	      NK_WINDOW_BORDER | NK_WINDOW_TITLE))
@@ -82,18 +102,18 @@ static void panel_props(void)
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	}
 
-	/*
-	if(node_selected) {
-		nk_layout_row_begin(ctx, NK_STATIC, 30, 1);
-		nk_layout_row_push(ctx, 50);
-		nk_label(ctx, "Position", NK_TEXT_LEFT);
-		nk_slider_float(ctx, 0, &node_selected->mat[3][0], 10.0f, 0.1f);
-		nk_slider_float(ctx, 0, &node_selected->mat[3][1], 10.0f, 0.1f);
-		nk_slider_float(ctx, 0, &node_selected->mat[3][2], 10.0f, 0.1f);
-		nk_layout_row_end(ctx);
+	if(object_selected) {
+		nk_layout_row_dynamic(ctx, 30, 4);
+		nk_label(ctx, "Position", NK_LEFT);
+		nk_property_float(ctx, "X", -INFINITY,
+		    &object_selected->trans[3][0], INFINITY, 0.001f, 0.001f);
+		nk_property_float(ctx, "Y", -INFINITY,
+		    &object_selected->trans[3][1], INFINITY, 0.001f, 0.001f);
+		nk_property_float(ctx, "Z", -INFINITY,
+		    &object_selected->trans[3][2], INFINITY, 0.001f, 0.001f);
 	}
-	*/
 
+	nk_layout_row_dynamic(ctx, 30, 1);
 	nk_checkbox_label(ctx, "Backface Culling", &cull_backface);
 	nk_end(ctx);
 }
@@ -115,6 +135,23 @@ static void panel_list(void)
 	}
 
 	nk_end(ctx);
+}
+
+static void axis_draw(void)
+{
+	glDisable(GL_CULL_FACE);
+	glUseProgram(axis_shader);
+	const uint32_t proj_loc = glGetUniformLocation(axis_shader, "u_proj");
+	const uint32_t view_loc = glGetUniformLocation(axis_shader, "u_view");
+	glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (const float *)proj_mat);
+	glUniformMatrix4fv(view_loc, 1, GL_FALSE, (const float *)view_mat);
+
+	glBindVertexArray(axis_mesh->vao);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glDrawElements(GL_LINES, axis_mesh->num_indis,
+		GL_UNSIGNED_SHORT, axis_mesh->indis);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindVertexArray(0);
 }
 
 static void draw(void)
@@ -145,6 +182,7 @@ static void draw(void)
 	};
 	mat4_lookat(view_mat, eye, focus, (float[3]){0, 0, 1});
 
+	axis_draw();
 	for(int i = 0; i < scene.num_objects; i++) {
 		object_t **obj = scene.objects + i;
 		object_draw(*obj, shader, proj_mat,

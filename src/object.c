@@ -6,6 +6,7 @@
 #include <GL/glew.h>
 
 #include "vector.h"
+#include "mat4.h"
 #include "object.h"
 
 object_t *object_selected = NULL;
@@ -15,6 +16,7 @@ object_t *object_create_empty(void)
 	object_t *obj = malloc(sizeof(object_t));
 	obj->flags = 0;
 	obj->mesh = NULL;
+	mat4_identity(obj->trans);
 	strncpy(obj->name, "Nothing", CONF_NAME_MAX);
 	object_selected = obj;
 	return obj;
@@ -27,6 +29,7 @@ object_t *object_create_tri(void)
 	object_t *obj = malloc(sizeof(object_t));
 	strncpy(obj->name, "Triangle", CONF_NAME_MAX);
 	obj->mesh = mesh_create_tri();
+	mat4_identity(obj->trans);
 	obj->flags = OBJ_IS_ACTIVE | OBJ_IS_VISIBLE;
 	object_selected = obj;
 
@@ -83,6 +86,7 @@ object_t *object_create_file(const char *path)
 	}
 
 	obj->mesh = mesh_create_data(num_verts, num_indis, verts, indis);
+	mat4_identity(obj->trans);
 	object_selected = obj;
 
 	free(verts);
@@ -100,10 +104,12 @@ void object_draw(const object_t *obj, const uint32_t shader,
 	glUseProgram(shader);
 	const uint32_t proj_loc = glGetUniformLocation(shader, "u_proj");
 	const uint32_t view_loc = glGetUniformLocation(shader, "u_view");
+	const uint32_t model_loc = glGetUniformLocation(shader, "u_model");
 	const uint32_t is_selected_loc =
 		glGetUniformLocation(shader, "u_is_selected");
 	glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (const float *)proj_mat);
 	glUniformMatrix4fv(view_loc, 1, GL_FALSE, (const float *)view_mat);
+	glUniformMatrix4fv(model_loc, 1, GL_FALSE, (const float *)obj->trans);
 	glUniform1i(is_selected_loc, is_selected);
 	mesh_draw(obj->mesh);
 }

@@ -15,6 +15,7 @@ enum object_flags {
 typedef struct {
 	char name[CONF_NAME_MAX];
 	mesh_t *mesh;
+	float trans[4][4];
 	enum object_flags flags;
 } object_t;
 
