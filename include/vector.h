@@ -1,6 +1,7 @@
 #ifndef VECTOR_H_
 #define VECTOR_H_
 
+void vector_zero(float *x, int size);
 void vector_copy(float *x, float *dst, int size);
 void vector_add(float *a, float *b, float *dst, int size);
 void vector_subtract(float *a, float *b, float *dst, int size);

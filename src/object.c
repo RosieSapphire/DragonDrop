@@ -3,17 +3,32 @@
 #include <assimp/scene.h>
 #include <assimp/cimport.h>
 #include <assimp/postprocess.h>
+#include <GL/glew.h>
 
-#include "mesh.h"
+#include "vector.h"
 #include "object.h"
+
+object_t *object_selected = NULL;
+
+object_t *object_create_empty(void)
+{
+	object_t *obj = malloc(sizeof(object_t));
+	obj->flags = 0;
+	obj->mesh = NULL;
+	strncpy(obj->name, "Nothing", CONF_NAME_MAX);
+	object_selected = obj;
+	return obj;
+}
 
 object_t *object_create_tri(void)
 {
-	object_t *obj = malloc(sizeof(object_t));
-	obj->flags = OBJ_IS_ACTIVE | OBJ_IS_VISIBLE;
 	printf("Generating Triangle...\n");
-	obj->mesh = mesh_create_tri();
+
+	object_t *obj = malloc(sizeof(object_t));
 	strncpy(obj->name, "Triangle", CONF_NAME_MAX);
+	obj->mesh = mesh_create_tri();
+	obj->flags = OBJ_IS_ACTIVE | OBJ_IS_VISIBLE;
+	object_selected = obj;
 
 	return obj;
 }
@@ -25,6 +40,7 @@ object_t *object_create_file(const char *path)
 		aiProcess_JoinIdenticalVertices |
 		aiProcess_RemoveRedundantMaterials | aiProcess_FlipWindingOrder;
 	const struct aiScene *scene = aiImportFile(path, flags);
+	object_t *obj = NULL;
 	if(!scene) {
 		fprintf(stderr, "Failed to open object scene '%s'\n", path);
 		return NULL;
@@ -37,7 +53,7 @@ object_t *object_create_file(const char *path)
 
 	printf("Opened object scene '%s'\n", path);
 
-	object_t *obj = malloc(sizeof(object_t));
+	obj = malloc(sizeof(object_t));
 	obj->flags = OBJ_IS_ACTIVE | OBJ_IS_VISIBLE;
 
 	const struct aiMesh *aimesh = scene->mMeshes[0];
@@ -67,11 +83,29 @@ object_t *object_create_file(const char *path)
 	}
 
 	obj->mesh = mesh_create_data(num_verts, num_indis, verts, indis);
+	object_selected = obj;
 
 	free(verts);
 	free(indis);
 
 	return obj;
+}
+
+void object_draw(const object_t *obj, const uint32_t shader,
+		 float proj_mat[4][4], float view_mat[4][4], bool is_selected)
+{
+	if(!(obj->flags & OBJ_IS_VISIBLE))
+		return;
+
+	glUseProgram(shader);
+	const uint32_t proj_loc = glGetUniformLocation(shader, "u_proj");
+	const uint32_t view_loc = glGetUniformLocation(shader, "u_view");
+	const uint32_t is_selected_loc =
+		glGetUniformLocation(shader, "u_is_selected");
+	glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (const float *)proj_mat);
+	glUniformMatrix4fv(view_loc, 1, GL_FALSE, (const float *)view_mat);
+	glUniform1i(is_selected_loc, is_selected);
+	mesh_draw(obj->mesh);
 }
 
 void object_destroy(object_t *o)

@@ -114,14 +114,8 @@ mesh_t *mesh_create_data(const uint16_t num_verts, const uint16_t num_indis,
 	return m;
 }
 
-void mesh_draw(const mesh_t *m, const uint32_t shader,
-	       const float proj[4][4], const float view[4][4])
+void mesh_draw(mesh_t *m)
 {
-	glUseProgram(shader);
-	const uint32_t proj_loc = glGetUniformLocation(shader, "u_proj");
-	const uint32_t view_loc = glGetUniformLocation(shader, "u_view");
-	glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (const float *)proj);
-	glUniformMatrix4fv(view_loc, 1, GL_FALSE, (const float *)view);
 	glBindVertexArray(m->vao);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glDrawElements(GL_TRIANGLES, m->num_indis, GL_UNSIGNED_SHORT, m->indis);

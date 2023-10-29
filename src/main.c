@@ -15,6 +15,8 @@
 #include "util.h"
 #include "object.h"
 #include "shader.h"
+#include "scene.h"
+#include "object.h"
 #include "mat4.h"
 
 static GLFWwindow *window = NULL;
@@ -23,7 +25,7 @@ static struct nk_glfw glfw = {0};
 
 static char load_buf[CONF_LOAD_BUF_MAX];
 
-static object_t *test_obj = NULL;
+static scene_t scene;
 static uint32_t shader = 0;
 static float proj_mat[4][4] = {{0}};
 static float view_mat[4][4] = {{0}};
@@ -58,14 +60,15 @@ static void init(void)
 
 	strncpy(load_buf, "pistol.glb", CONF_LOAD_BUF_MAX);
 	// memset(load_buf, 0, CONF_LOAD_BUF_MAX);
+	
+	scene_init(&scene);
 }
 
 static void panel_props(void)
 {
-	char label[CONF_NAME_MAX];
-	sprintf(label, "%s", test_obj->name);
-
-	if(!nk_begin(ctx, label, nk_rect(0, 0, 210, CONF_HEIGHT),
+	static const int width = 210;
+	if(!nk_begin(ctx, object_selected ? object_selected->name : "null",
+	      nk_rect(0, 0, width, CONF_HEIGHT),
 	      NK_WINDOW_BORDER | NK_WINDOW_TITLE))
 		return;
 
@@ -73,18 +76,42 @@ static void panel_props(void)
 
 	/* loading object */
 	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, load_buf,
-				CONF_LOAD_BUF_MAX,
-				nk_filter_default);
-	if(nk_button_label(ctx, "Load Object") && !test_obj) {
-		test_obj = object_create_file(load_buf);
+				CONF_LOAD_BUF_MAX, nk_filter_default);
+	if(nk_button_label(ctx, "Load Object")) {
+		scene_object_add(&scene, load_buf);
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	}
 
-	nk_checkbox_label(ctx, "Backface Culling", &cull_backface);
+	/*
+	if(node_selected) {
+		nk_layout_row_begin(ctx, NK_STATIC, 30, 1);
+		nk_layout_row_push(ctx, 50);
+		nk_label(ctx, "Position", NK_TEXT_LEFT);
+		nk_slider_float(ctx, 0, &node_selected->mat[3][0], 10.0f, 0.1f);
+		nk_slider_float(ctx, 0, &node_selected->mat[3][1], 10.0f, 0.1f);
+		nk_slider_float(ctx, 0, &node_selected->mat[3][2], 10.0f, 0.1f);
+		nk_layout_row_end(ctx);
+	}
+	*/
 
-	if(nk_button_label(ctx, "Destroy Selected") && test_obj) {
-		object_destroy(test_obj);
-		test_obj = NULL;
+	nk_checkbox_label(ctx, "Backface Culling", &cull_backface);
+	nk_end(ctx);
+}
+
+static void panel_list(void)
+{
+	static const int width = 240;
+	if(!nk_begin(ctx, "Object List", nk_rect(CONF_WIDTH - width, 0, width,
+					CONF_HEIGHT), NK_WINDOW_TITLE |
+		NK_WINDOW_BORDER))
+		return;
+
+	nk_layout_row_dynamic(ctx, 30, 1);
+	for(int i = 0; i < scene.num_objects; i++) {
+		object_t *obj = scene.objects[i];
+		if(nk_option_label(ctx, obj->name, obj == object_selected)) {
+			object_selected = obj;
+		}
 	}
 
 	nk_end(ctx);
@@ -94,6 +121,7 @@ static void draw(void)
 {
 	nk_glfw3_new_frame(&glfw);
 	panel_props();
+	panel_list();
 
 	if(cull_backface) {
 		glEnable(GL_CULL_FACE);
@@ -117,10 +145,10 @@ static void draw(void)
 	};
 	mat4_lookat(view_mat, eye, focus, (float[3]){0, 0, 1});
 
-	printf("%f\n", cosf(view_angle[1]));
-
-	if(test_obj) {
-		mesh_draw(test_obj->mesh, shader, proj_mat, view_mat);
+	for(int i = 0; i < scene.num_objects; i++) {
+		object_t **obj = scene.objects + i;
+		object_draw(*obj, shader, proj_mat,
+	      view_mat, object_selected == *obj);
 	}
 
 	nk_glfw3_render(&glfw, NK_ANTI_ALIASING_ON,

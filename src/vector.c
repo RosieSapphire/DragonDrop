@@ -1,6 +1,12 @@
+#include <string.h>
 #include <math.h>
 
 #include "vector.h"
+
+void vector_zero(float *x, int size)
+{
+	memset(x, 0, size * sizeof(float));
+}
 
 void vector_copy(float *x, float *dst, int size)
 {
