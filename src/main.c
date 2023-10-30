@@ -352,7 +352,8 @@ static void mouse_input(void)
 			input_mode = IMODE_NORMAL;
 		}
 
-		if(right_click_now && !right_click_last) {
+		if((right_click_now && !right_click_last) ||
+				glfwGetKey(window, GLFW_KEY_ESCAPE)) {
 			axis_move = -1;
 			input_mode = IMODE_NORMAL;
 			vector_copy(last_normal_pos,
