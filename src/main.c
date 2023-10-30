@@ -329,12 +329,18 @@ static void mouse_input_moving(void)
 static void mouse_input(void)
 {
 	static int key_g_last = 0;
+	static int right_click_last = 0;
 	int key_g_now = glfwGetKey(window, GLFW_KEY_G);
+	int right_click_now =
+		glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
+	static float last_normal_pos[3] = {0, 0, 0};
 	switch(input_mode) {
 	case IMODE_NORMAL:
 		mouse_input_orbiting();
 		mouse_input_zooming();
 		if(key_g_now && !key_g_last && object_selected) {
+			vector_copy(object_selected->trans[3],
+				last_normal_pos, 3);
 			input_mode = IMODE_MOVE;
 		}
 		break;
@@ -345,12 +351,20 @@ static void mouse_input(void)
 			axis_move = -1;
 			input_mode = IMODE_NORMAL;
 		}
+
+		if(right_click_now && !right_click_last) {
+			axis_move = -1;
+			input_mode = IMODE_NORMAL;
+			vector_copy(last_normal_pos,
+	       				object_selected->trans[3], 3);
+		}
 		break;
 
 	default:
 		break;
 	}
 	key_g_last = key_g_now;
+	right_click_last = right_click_now;
 
 	glfwGetCursorPos(window, mouse_last + 0, mouse_last + 1);
 }
