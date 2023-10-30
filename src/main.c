@@ -253,6 +253,43 @@ static void mouse_input_zooming(void)
 	zoom = fmaxf(zoom, 0);
 }
 
+static void camera_forw_side(float *eye, float *forw, float *side, float *up)
+{
+	vector_subtract(focus, eye, forw, 3);
+	vector_normalize(forw, 3);
+	vector3_cross(forw, up, side);
+}
+
+static void mouse_input_panning(void)
+{
+	if(!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)) {
+		return;
+	}
+
+	double mouse_now[2];
+	glfwGetCursorPos(window, mouse_now + 0, mouse_now + 1);
+
+	if(mouse_now[0] <= 420 || mouse_now[0] >= CONF_WIDTH - 240) {
+		return;
+	}
+
+	double mouse_delta[2] = {
+		mouse_now[0] - mouse_last[0],
+		mouse_now[1] - mouse_last[1],
+	};
+
+	float eye[3];
+	camera_eye(eye);
+	float up[3] = {0, 0, 1}, forw[3], side[3];
+	camera_forw_side(eye, forw, side, up);
+	float move[3];
+	vector_scale(up, mouse_delta[1] * 0.02f, 3);
+	vector_scale(side, mouse_delta[0] * 0.02f, 3);
+	vector_add(up, side, move, 3);
+
+	vector_add(focus, move, focus, 3);
+}
+
 static int axis_move = -1;
 static void mouse_input_moving(void)
 {
@@ -286,13 +323,11 @@ static void mouse_input_moving(void)
 	float *obj_pos = object_selected->trans[3];
 
 	float cam_eye[3];
-	camera_eye(cam_eye);
 	float forw[3];
-	vector_subtract(focus, cam_eye, forw, 3);
-	vector_normalize(forw, 3);
-	float up[3] = {0, 0, 1};
 	float side[3];
-	vector3_cross(forw, up, side);
+	float up[3] = {0, 0, 1};
+	camera_eye(cam_eye);
+	camera_forw_side(cam_eye, forw, side, up);
 	vector_scale(up, -mouse_delta[1] * 0.02f, 3);
 	vector_scale(side, -mouse_delta[0] * 0.02f, 3);
 	float move[3];
@@ -338,6 +373,7 @@ static void mouse_input(void)
 	case IMODE_NORMAL:
 		mouse_input_orbiting();
 		mouse_input_zooming();
+		mouse_input_panning();
 		if(key_g_now && !key_g_last && object_selected) {
 			vector_copy(object_selected->trans[3],
 				last_normal_pos, 3);
