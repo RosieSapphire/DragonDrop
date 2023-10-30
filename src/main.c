@@ -116,6 +116,10 @@ static void panel_props(void)
 		    &object_selected->trans[3][1], INFINITY, 0.001f, 0.001f);
 		nk_property_float(ctx, "Z", -INFINITY,
 		    &object_selected->trans[3][2], INFINITY, 0.001f, 0.001f);
+		nk_layout_row_dynamic(ctx, 30, 1);
+		if(nk_button_label(ctx, "Reset Position")) {
+			vector_zero(object_selected->trans[3], 3);
+		}
 
 		nk_layout_row_dynamic(ctx, 30, 1);
 		nk_checkbox_flags_label(ctx, "Has Collision",
@@ -264,7 +268,9 @@ static void camera_forw_side(float *eye, float *forw, float *side, float *up)
 
 static void mouse_input_panning(void)
 {
+	static float eye_last[3] = {0, 0, 0};
 	if(!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)) {
+		camera_eye(eye_last);
 		return;
 	}
 
@@ -280,10 +286,8 @@ static void mouse_input_panning(void)
 		mouse_now[1] - mouse_last[1],
 	};
 
-	float eye[3];
-	camera_eye(eye);
 	float up[3] = {0, 0, 1}, forw[3], side[3];
-	camera_forw_side(eye, forw, side, up);
+	camera_forw_side(eye_last, forw, side, up);
 	float move[3];
 	vector_scale(up, mouse_delta[1] * 0.02f, 3);
 	vector_scale(side, mouse_delta[0] * 0.02f, 3);
@@ -383,7 +387,9 @@ static void mouse_input(void)
 
 	case IMODE_MOVE:
 		mouse_input_moving();
-		if(key_g_now && !key_g_last) {
+		if((key_g_now && !key_g_last) ||
+				glfwGetMouseButton(window,
+			GLFW_MOUSE_BUTTON_LEFT)) {
 			axis_move = -1;
 			input_mode = IMODE_NORMAL;
 		}
