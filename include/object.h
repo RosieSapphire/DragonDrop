@@ -10,7 +10,8 @@
 
 enum object_flags {
 	OBJ_HAS_COLLISION  = 0b00000001,
-	OBJ_IS_VISIBLE = 0b00000010,
+	OBJ_IS_VISIBLE     = 0b00000010,
+	OBJ_IS_PICKUP      = 0b00000100,
 };
 
 typedef struct {

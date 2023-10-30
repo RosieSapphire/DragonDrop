@@ -122,6 +122,8 @@ static void panel_props(void)
 			  &object_selected->flags, OBJ_HAS_COLLISION);
 		nk_checkbox_flags_label(ctx, "Is Visible",
 			  &object_selected->flags, OBJ_IS_VISIBLE);
+		nk_checkbox_flags_label(ctx, "Is Pickup",
+			  &object_selected->flags, OBJ_IS_PICKUP);
 	}
 
 
@@ -355,8 +357,6 @@ static void mouse_input_moving(void)
 		move[2] *= 1;
 		break;
 	}
-
-	printf("%d\n", axis_move);
 
 	vector_add(obj_pos, move, obj_pos, 3);
 }
