@@ -62,7 +62,7 @@ static void init(void)
 	shader = shader_create("res/shaders/base.vert", "res/shaders/base.frag");
 	mat4_perspective(proj_mat, 75.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
 
-	strncpy(load_buf, "res/models/pistol.glb", CONF_LOAD_BUF_MAX);
+	strncpy(load_buf, "pistol.glb", CONF_LOAD_BUF_MAX);
 	// memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	
 	scene_init(&scene);
@@ -102,8 +102,10 @@ static void panel_props(void)
 	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, load_buf,
 				CONF_LOAD_BUF_MAX, nk_filter_default);
 	/* TODO: Make sure to add instancing at some point */
-	if(nk_button_label(ctx, "Load Object")) {
-		scene_object_add(&scene, load_buf);
+	if(nk_button_label(ctx, "Load GLB Object")) {
+		char full_load_buf[CONF_LOAD_BUF_MAX + 11];
+		sprintf(full_load_buf, "res/models/%s", load_buf);
+		scene_object_add(&scene, full_load_buf);
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	}
 
@@ -175,9 +177,10 @@ static void axis_draw(void)
 static void camera_eye(float *out)
 {
 	const float cosv1 = cosf(view_angle[1]);
-	out[0] = cosf(view_angle[0]) * cosv1 * zoom;
-	out[1] = sinf(view_angle[0]) * cosv1 * zoom;
-	out[2] = sinf(view_angle[1]) * zoom;
+	vector_copy(focus, out, 3);
+	out[0] += cosf(view_angle[0]) * cosv1 * zoom;
+	out[1] += sinf(view_angle[0]) * cosv1 * zoom;
+	out[2] += sinf(view_angle[1]) * zoom;
 }
 
 static void draw(void)
@@ -259,18 +262,19 @@ static void mouse_input_zooming(void)
 	zoom = fmaxf(zoom, 0);
 }
 
-static void camera_forw_side(float *eye, float *forw, float *side, float *up)
+static void camera_forw_side_up(float *eye, float *forw, float *side, float *up)
 {
 	vector_subtract(focus, eye, forw, 3);
 	vector_normalize(forw, 3);
-	vector3_cross(forw, up, side);
+	float up1[3] = {0, 0, 1};
+	vector3_cross(forw, up1, side);
+	vector3_cross(forw, side, up);
+	vector_negate(up, 3);
 }
 
 static void mouse_input_panning(void)
 {
-	static float eye_last[3] = {0, 0, 0};
 	if(!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)) {
-		camera_eye(eye_last);
 		return;
 	}
 
@@ -286,8 +290,10 @@ static void mouse_input_panning(void)
 		mouse_now[1] - mouse_last[1],
 	};
 
-	float up[3] = {0, 0, 1}, forw[3], side[3];
-	camera_forw_side(eye_last, forw, side, up);
+	float eye[3] = {0, 0, 0};
+	camera_eye(eye);
+	float forw[3], side[3], up[3];
+	camera_forw_side_up(eye, forw, side, up);
 	float move[3];
 	vector_scale(up, mouse_delta[1] * 0.02f, 3);
 	vector_scale(side, mouse_delta[0] * 0.02f, 3);
@@ -328,12 +334,9 @@ static void mouse_input_moving(void)
 
 	float *obj_pos = object_selected->trans[3];
 
-	float cam_eye[3];
-	float forw[3];
-	float side[3];
-	float up[3] = {0, 0, 1};
+	float cam_eye[3], forw[3], side[3], up[3];
 	camera_eye(cam_eye);
-	camera_forw_side(cam_eye, forw, side, up);
+	camera_forw_side_up(cam_eye, forw, side, up);
 	vector_scale(up, -mouse_delta[1] * 0.02f, 3);
 	vector_scale(side, -mouse_delta[0] * 0.02f, 3);
 	float move[3];
