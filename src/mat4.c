@@ -4,22 +4,27 @@
 #include <math.h>
 #include <stdio.h>
 
-void mat4_zero(float m[4][4])
+void mat4_copy(float *src, float *dst)
+{
+	memcpy(dst, src, sizeof(float) * 16);
+}
+
+void mat4_zero(float *m)
 {
 	memset(m, 0, sizeof(float) * 4 * 4);
 }
 
 void mat4_identity(float m[4][4])
 {
-	mat4_zero(m);
+	mat4_zero((float *)m);
 	for(int i = 0; i < 4; i++)
 		m[i][i] = 1;
 }
 
-void mat4_perspective(float m[4][4], float fov_deg,
-		      float aspect, float near, float far)
+void mat4_perspective(float m[4][4], float fov_deg, float aspect,
+		      float near, float far)
 {
-	mat4_zero(m);
+	mat4_zero((float *)m);
 
 	float fov_itan = 1.0f / tanf(fov_deg * DEG_TO_RAD * 0.5f);
 	m[0][0] = fov_itan / aspect;
@@ -33,7 +38,7 @@ void mat4_perspective(float m[4][4], float fov_deg,
 
 void mat4_ortho(float m[4][4], float l, float r, float t, float b)
 {
-	mat4_zero(m);
+	mat4_zero((float *)m);
 
 	float rl = 1 / (r - l);
 	float tb = 1 / (t - b);
@@ -69,7 +74,7 @@ void mat4_rotate(float m[4][4], float axis[3], float radang)
 	const float sinang = sinf(radang);
 	const float cosang = cosf(radang);
 	float rot[4][4];
-	mat4_zero(rot);
+	mat4_zero((float *)rot);
 
 	rot[0][0] = cosang + (axis[0] * axis[0]) * (1 - cosang);
 	rot[1][0] = axis[0] * axis[1] * (1 - cosang) - axis[2] * sinang;
@@ -91,7 +96,7 @@ void mat4_rotate(float m[4][4], float axis[3], float radang)
 void mat4_multiply(float a[4][4], float b[4][4], float out[4][4])
 {
 	float tmp[4][4];
-	mat4_zero(tmp);
+	mat4_zero((float *)tmp);
 	for(int row = 0; row < 4; row++)
 		for(int col = 0; col < 4; col++)
 			for(int ind = 0; ind < 4; ind++)
@@ -102,7 +107,7 @@ void mat4_multiply(float a[4][4], float b[4][4], float out[4][4])
 
 void mat4_from_quat(float q[4], float out[4][4])
 {
-	mat4_zero(out);
+	mat4_zero((float *)out);
 
 	float norm = sqrtf(vector_dot(q, q, 4));
 	float s = 0.0f;
@@ -132,7 +137,7 @@ void mat4_from_quat(float q[4], float out[4][4])
                      
 void mat4_lookat(float m[4][4], float eye[3], float focus[3], float gup[3])
 {
-	mat4_zero(m);
+	mat4_zero((float *)m);
 
 	float front[3], side[3], up[3];
 	vector_subtract(focus, eye, front, 3);

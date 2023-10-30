@@ -8,7 +8,9 @@ typedef struct {
 	object_t **objects;
 } scene_t;
 
-void scene_init(scene_t *s);
+scene_t *scene_create_empty(void);
+scene_t *scene_create_file(const char *path);
+void scene_write_file(const scene_t *s, const char *path);
 void scene_object_add(scene_t *s, const char *path);
 
 #endif /* SCENE_H_ */

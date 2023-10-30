@@ -8,18 +8,16 @@
 #include "mesh.h"
 #include "aabb.h"
 
-enum object_flags {
-	OBJ_HAS_COLLISION  = 0b00000001,
-	OBJ_IS_VISIBLE     = 0b00000010,
-	OBJ_IS_PICKUP      = 0b00000100,
-};
+#define OBJ_HAS_COLLISION 0b00000001
+#define OBJ_IS_VISIBLE    0b00000010
+#define OBJ_IS_PICKUP     0b00000100
 
 typedef struct {
 	char name[CONF_NAME_MAX];
 	mesh_t *mesh;
 	aabb_t aabb;
 	float trans[4][4];
-	enum object_flags flags;
+	uint32_t flags;
 } object_t;
 
 extern object_t *object_selected;

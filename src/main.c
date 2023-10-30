@@ -26,7 +26,7 @@ static struct nk_glfw glfw = {0};
 
 static char load_buf[CONF_LOAD_BUF_MAX];
 
-static scene_t scene;
+static scene_t *scene = NULL;
 static uint32_t shader = 0;
 static uint32_t axis_shader = 0;
 static float proj_mat[4][4] = {{0}};
@@ -65,10 +65,9 @@ static void init(void)
 	strncpy(load_buf, "pistol.glb", CONF_LOAD_BUF_MAX);
 	// memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	
-	scene_init(&scene);
-
-	axis_shader =
-		shader_create("res/shaders/axis.vert", "res/shaders/axis.frag");
+	scene = scene_create_empty();
+	axis_shader = shader_create("res/shaders/axis.vert",
+			     "res/shaders/axis.frag");
 	const vertex_t axis_verts[6] = {
 		{{0, 0, 0}, {0, 0}, {1, 0, 0}},
 		{{1, 0, 0}, {0, 0}, {1, 0, 0}},
@@ -102,13 +101,29 @@ static void panel_props(void)
 	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, load_buf,
 				CONF_LOAD_BUF_MAX, nk_filter_default);
 	/* TODO: Make sure to add instancing at some point */
+	nk_layout_row_dynamic(ctx, 30, 2);
 	if(nk_button_label(ctx, "Load GLB Object")) {
 		char full_load_buf[CONF_LOAD_BUF_MAX + 11];
 		sprintf(full_load_buf, "res/models/%s", load_buf);
-		scene_object_add(&scene, full_load_buf);
+		scene_object_add(scene, full_load_buf);
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	}
 
+	/* scene loading */
+	if(nk_button_label(ctx, "Load Scene")) {
+		free(scene);
+		scene = scene_create_file(load_buf);
+		object_selected = scene->objects[0];
+		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
+	}
+
+	/* scene exporting */
+	if(nk_button_label(ctx, "Save Scene")) {
+		scene_write_file(scene, load_buf);
+		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
+	}
+
+	/* object properties */
 	if(object_selected) {
 		nk_layout_row_dynamic(ctx, 30, 4);
 		nk_label(ctx, "Position", NK_TEXT_LEFT);
@@ -123,7 +138,7 @@ static void panel_props(void)
 			vector_zero(object_selected->trans[3], 3);
 		}
 
-		nk_layout_row_dynamic(ctx, 30, 1);
+		nk_layout_row_dynamic(ctx, 30, 3);
 		nk_checkbox_flags_label(ctx, "Has Collision",
 			  &object_selected->flags, OBJ_HAS_COLLISION);
 		nk_checkbox_flags_label(ctx, "Is Visible",
@@ -133,6 +148,7 @@ static void panel_props(void)
 	}
 
 
+	nk_layout_row_dynamic(ctx, 30, 1);
 	nk_label(ctx, "Global", NK_TEXT_LEFT);
 	nk_checkbox_label(ctx, "Backface Culling", &cull_backface);
 	nk_end(ctx);
@@ -147,8 +163,8 @@ static void panel_list(void)
 		return;
 
 	nk_layout_row_dynamic(ctx, 30, 1);
-	for(int i = 0; i < scene.num_objects; i++) {
-		object_t *obj = scene.objects[i];
+	for(int i = 0; i < scene->num_objects; i++) {
+		object_t *obj = scene->objects[i];
 		if(nk_option_label(ctx, obj->name, obj == object_selected)) {
 			object_selected = obj;
 		}
@@ -208,11 +224,11 @@ static void draw(void)
 	mat4_lookat(view_mat, eye, focus, (float[3]){0, 0, 1});
 
 	axis_draw();
-	for(int i = 0; i < scene.num_objects; i++) {
-		object_t **obj = scene.objects + i;
-		object_draw(*obj, shader, proj_mat,
-	      view_mat, object_selected == *obj);
-		aabb_draw((*obj)->aabb, proj_mat, view_mat, (*obj)->trans);
+	for(int i = 0; i < scene->num_objects; i++) {
+		object_t *obj = scene->objects[i];
+		object_draw(obj, shader, proj_mat,
+	      view_mat, object_selected == obj);
+		aabb_draw(obj->aabb, proj_mat, view_mat, obj->trans);
 	}
 
 	nk_glfw3_render(&glfw, NK_ANTI_ALIASING_ON,
