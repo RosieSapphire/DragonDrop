@@ -10,5 +10,6 @@ float vector_dot(float *a, float *b, int size);
 void vector3_cross(float *a, float *b, float *dst);
 void vector_normalize(float *x, int size);
 void vector_negate(float *x, int size);
+void vector_printf(float *x, int size);
 
 #endif /* VECTOR_H_ */

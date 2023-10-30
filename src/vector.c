@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include <math.h>
 
@@ -57,4 +58,12 @@ void vector_normalize(float *x, int size)
 void vector_negate(float *x, int size)
 {
 	vector_scale(x, -1.0f, size);
+}
+
+void vector_printf(float *x, int size)
+{
+	for(int i = 0; i < size; i++) {
+		printf("%f ", x[i]);
+	}
+	printf("\n");
 }

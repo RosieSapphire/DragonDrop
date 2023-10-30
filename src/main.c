@@ -32,7 +32,7 @@ static uint32_t axis_shader = 0;
 static float proj_mat[4][4] = {{0}};
 static float view_mat[4][4] = {{0}};
 
-static double view_angle[2] = {0, 0};
+static float view_angle[2] = {0, 0};
 static float focus[3] = {0, 0, 0};
 static float zoom = 3.0f;
 
@@ -166,6 +166,14 @@ static void axis_draw(void)
 	glBindVertexArray(0);
 }
 
+static void camera_eye(float *out)
+{
+	const float cosv1 = cosf(view_angle[1]);
+	out[0] = cosf(view_angle[0]) * cosv1 * zoom;
+	out[1] = sinf(view_angle[0]) * cosv1 * zoom;
+	out[2] = sinf(view_angle[1]) * zoom;
+}
+
 static void draw(void)
 {
 	nk_glfw3_new_frame(&glfw);
@@ -186,12 +194,8 @@ static void draw(void)
 	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	const float cosv1 = cosf(view_angle[1]);
-	float eye[3] = {
-		cosf(view_angle[0]) * cosv1 * zoom,
-		sinf(view_angle[0]) * cosv1 * zoom,
-	     	sinf(view_angle[1]) * zoom,
-	};
+	float eye[3];
+	camera_eye(eye);
 	mat4_lookat(view_mat, eye, focus, (float[3]){0, 0, 1});
 
 	axis_draw();
@@ -207,36 +211,146 @@ static void draw(void)
 	glfwSwapBuffers(window);
 }
 
+enum input_mode {
+	IMODE_NORMAL,
+	IMODE_MOVE,
+	IMODE_ROTATE,
+	IMODE_SCALE,
+	IMODE_NUM_STATES,
+};
+
+static enum input_mode input_mode = IMODE_NORMAL;
+static double mouse_last[2] = {0, 0};
+
+static void mouse_input_orbiting(void)
+{
+	if(!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT))
+		return;
+
+	double mouse_now[2];
+	glfwGetCursorPos(window, mouse_now + 0, mouse_now + 1);
+	double mouse_delta[2] = {
+		mouse_now[0] - mouse_last[0],
+		mouse_now[1] - mouse_last[1],
+	};
+	mouse_last[0] = mouse_now[0];
+	mouse_last[1] = mouse_now[1];
+	view_angle[0] += mouse_delta[0] * 0.02f;
+	view_angle[1] += mouse_delta[1] * 0.02f;
+	view_angle[1] = clampf(view_angle[1], -1.5f, 1.5f);
+}
+
+static void mouse_input_zooming(void)
+{
+	if(!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE))
+		return;
+
+	double mouse_y_now;
+	glfwGetCursorPos(window, NULL, &mouse_y_now);
+	double mouse_y_delta = mouse_y_now - mouse_last[1];
+	mouse_last[1] = mouse_y_now;
+	zoom += mouse_y_delta * 0.01f;
+	zoom = fmaxf(zoom, 0);
+}
+
+static int axis_move = -1;
+static void mouse_input_moving(void)
+{
+	static int axis_key_last[3] = {0, 0, 0};
+	int axis_key_now[3] = {
+		glfwGetKey(window, GLFW_KEY_X),
+		glfwGetKey(window, GLFW_KEY_Y),
+		glfwGetKey(window, GLFW_KEY_Z),
+	};
+
+	for(int i = 0; i < 3; i++) {
+		if(!axis_key_last[i] && axis_key_now[i]) {
+			if(i == axis_move) {
+				axis_move = -1;
+			} else {
+				axis_move = i;
+			}
+		}
+		axis_key_last[i] = axis_key_now[i];
+	}
+
+	double mouse_now[2];
+	glfwGetCursorPos(window, mouse_now + 0, mouse_now + 1);
+	double mouse_delta[2] = {
+		mouse_now[0] - mouse_last[0],
+		mouse_now[1] - mouse_last[1],
+	};
+	mouse_last[0] = mouse_now[0];
+	mouse_last[1] = mouse_now[1];
+
+	float *obj_pos = object_selected->trans[3];
+
+	float cam_eye[3];
+	camera_eye(cam_eye);
+	float forw[3];
+	vector_subtract(focus, cam_eye, forw, 3);
+	vector_normalize(forw, 3);
+	float up[3] = {0, 0, 1};
+	float side[3];
+	vector3_cross(forw, up, side);
+	vector_scale(up, -mouse_delta[1] * 0.02f, 3);
+	vector_scale(side, -mouse_delta[0] * 0.02f, 3);
+	float move[3];
+	vector_add(up, side, move, 3);
+
+	switch(axis_move) {
+	case -1:
+		break;
+
+	case 0:
+		move[0] *= 1;
+		move[1] *= 0;
+		move[2] *= 0;
+		break;
+	
+	case 1:                             
+		move[0] *= 0;
+		move[1] *= 1;
+		move[2] *= 0;
+		break;
+
+	case 2:                             
+		move[0] *= 0;
+		move[1] *= 0;
+		move[2] *= 1;
+		break;
+	}
+
+	printf("%d\n", axis_move);
+
+	vector_add(obj_pos, move, obj_pos, 3);
+}
+
 static void mouse_input(void)
 {
-	static double mouse_last[2] = {0, 0};
+	static int key_g_last = 0;
+	int key_g_now = glfwGetKey(window, GLFW_KEY_G);
+	switch(input_mode) {
+	case IMODE_NORMAL:
+		mouse_input_orbiting();
+		mouse_input_zooming();
+		if(key_g_now && !key_g_last && object_selected) {
+			input_mode = IMODE_MOVE;
+		}
+		break;
 
-	/* orbiting */
-	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT)) {
-		double mouse_now[2];
-		glfwGetCursorPos(window, mouse_now + 0, mouse_now + 1);
-		double mouse_delta[2] = {
-			mouse_now[0] - mouse_last[0],
-			mouse_now[1] - mouse_last[1],
-		};
-		mouse_last[0] = mouse_now[0];
-		mouse_last[1] = mouse_now[1];
-		view_angle[0] += mouse_delta[0] * 0.02f;
-		view_angle[1] += mouse_delta[1] * 0.02f;
-		view_angle[1] = clampf(view_angle[1], -1.5f, 1.5f);
-		return;
-	}
+	case IMODE_MOVE:
+		mouse_input_moving();
+		if(key_g_now && !key_g_last) {
+			axis_move = -1;
+			input_mode = IMODE_NORMAL;
+		}
+		break;
 
-	/* zooming */
-	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE)) {
-		double mouse_y_now;
-		glfwGetCursorPos(window, NULL, &mouse_y_now);
-		double mouse_y_delta = mouse_y_now - mouse_last[1];
-		mouse_last[1] = mouse_y_now;
-		zoom += mouse_y_delta * 0.01f;
-		zoom = fmaxf(zoom, 0);
-		return;
+	default:
+		break;
 	}
+	key_g_last = key_g_now;
 
 	glfwGetCursorPos(window, mouse_last + 0, mouse_last + 1);
 }
