@@ -11,17 +11,12 @@
 #include "nuklear/nuklear.h"
 #include "nuklear/nuklear_glfw_gl3.h"
 
-#include "config.h"
-#include "util.h"
-#include "object.h"
-#include "shader.h"
-#include "scene.h"
-#include "object.h"
-#include "mat4.h"
-#include "aabb.h"
-#include "debug.h"
-#include "camera.h"
 #include "mouse.h"
+#include "camera.h"
+#include "scene.h"
+#include "debug.h"
+#include "mat4.h"
+#include "shader.h"
 #include "panels.h"
 
 static GLFWwindow *window;
@@ -73,7 +68,8 @@ static void init(void)
 
 	mat4_perspective(proj_mat, 75.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
 	scene = scene_create_empty();
-	shader = shader_create("res/shaders/base.vert", "res/shaders/base.frag");
+	shader = shader_create("res/shaders/base.vert",
+			"res/shaders/base.frag");
 	axis_shader = shader_create("res/shaders/axis.vert",
 			     "res/shaders/axis.frag");
 	axis_mesh = mesh_create_axis();
