@@ -3,8 +3,8 @@
 
 #include "mesh.h"
 
-/* Axis-Aligned Bounding Box */
-typedef struct {
+typedef struct
+{
 	float xmin, xmax, ymin, ymax, zmin, zmax;
 } aabb_t;
 

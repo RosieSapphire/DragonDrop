@@ -179,7 +179,7 @@ static void _scene_write_aabb(const aabb_t box, FILE *f)
 static void _scene_write_trans(float *trans, FILE *f)
 {
 	float t[4][4];
-	mat4_copy(trans, (float *)t);
+	memcpy(t, trans, sizeof(float) * 16);
 	for(int i = 0; i < 16; i++) {
 		((float *)t)[i] = float_endian_flip(*((float *)t + i));
 	}
@@ -210,6 +210,8 @@ void scene_write_file(const scene_t *s, const char *path)
 	for(int i = 0; i < s->num_objects; i++) {
 		_scene_write_object(s->objects[i], out);
 	}
+
+	debugf("Wrote Scene to '%s' (num_objects=%d)\n", path, s->num_objects);
 }
 
 void scene_object_add(scene_t *s, const char *path)

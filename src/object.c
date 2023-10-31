@@ -10,31 +10,14 @@
 #include "debug.h"
 #include "object.h"
 
-object_t *object_selected = NULL;
-
-object_t *object_create_empty(void)
+object_t *object_create_empty(object_t **obj_cur)
 {
 	object_t *obj = malloc(sizeof(object_t));
 	obj->flags = 0;
 	obj->mesh = NULL;
 	mat4_identity(obj->trans);
 	strncpy(obj->name, "Nothing", CONF_NAME_MAX);
-	object_selected = obj;
-	return obj;
-}
-
-object_t *object_create_tri(void)
-{
-	debugf("Generating Triangle\n");
-
-	object_t *obj = malloc(sizeof(object_t));
-	strncpy(obj->name, "Triangle", CONF_NAME_MAX);
-	obj->mesh = mesh_create_tri();
-	obj->aabb = aabb_from_mesh(obj->mesh);
-	mat4_identity(obj->trans);
-	obj->flags = OBJ_HAS_COLLISION | OBJ_IS_VISIBLE;
-	object_selected = obj;
-
+	*obj_cur = obj;
 	return obj;
 }
 
@@ -90,7 +73,6 @@ object_t *object_create_file(const char *path)
 	obj->mesh = mesh_create_data(num_verts, num_indis, verts, indis);
 	obj->aabb = aabb_from_mesh(obj->mesh);
 	mat4_identity(obj->trans);
-	object_selected = obj;
 
 	free(verts);
 	free(indis);

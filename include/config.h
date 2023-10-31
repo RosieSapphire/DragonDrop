@@ -12,8 +12,8 @@
 #define CONF_NEAR 0.1f
 #define CONF_FAR 64.0f
 
-#define CONF_VERT_BUF_MAX 512 * 1024
-#define CONF_ELEM_BUF_MAX 128 * 1024
+#define CONF_VERT_BUF_MAX (512 * 1024)
+#define CONF_ELEM_BUF_MAX (128 * 1024)
 #define CONF_LOAD_BUF_MAX 128
 
 #endif /* CONFIG_H_ */

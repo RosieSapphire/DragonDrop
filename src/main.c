@@ -21,12 +21,16 @@
 #include "aabb.h"
 #include "debug.h"
 #include "camera.h"
-#include "panels.h"
 #include "mouse.h"
+#include "panels.h"
 
 static GLFWwindow *window;
 static struct nk_context *ctx;
 static struct nk_glfw glfw = {0};
+static mouse_t mouse;
+static camera_t cam;
+
+static object_t *obj_cur;
 
 static uint32_t shader;
 static uint32_t axis_shader;
@@ -39,7 +43,10 @@ static void init(void)
 {
 	debug_init();
 
+	obj_cur = NULL;
 	cull_backface = false;
+	camera_init(&cam);
+	mouse_init(&mouse);
 
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -74,11 +81,11 @@ static void init(void)
 
 static void axis_draw(void)
 {
-	glDisable(GL_CULL_FACE);
-	glUseProgram(axis_shader);
 	const uint32_t proj_loc = glGetUniformLocation(axis_shader, "u_proj");
 	const uint32_t view_loc = glGetUniformLocation(axis_shader, "u_view");
 
+	glDisable(GL_CULL_FACE);
+	glUseProgram(axis_shader);
 	glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (const float *)proj_mat);
 	glUniformMatrix4fv(view_loc, 1, GL_FALSE, (const float *)view_mat);
 
@@ -93,8 +100,8 @@ static void axis_draw(void)
 static void draw(void)
 {
 	nk_glfw3_new_frame(&glfw);
-	panel_props(ctx);
-	panel_list(ctx);
+	panel_props(ctx, &obj_cur);
+	panel_list(ctx, &obj_cur);
 	debug_panel(ctx);
 
 	if (cull_backface)
@@ -116,8 +123,8 @@ static void draw(void)
 	float eye[3];
 	float up[3] = {0, 0, 1};
 
-	camera_eye(eye);
-	mat4_lookat(view_mat, eye, camera_focus, up);
+	camera_eye(&cam, eye);
+	mat4_lookat(view_mat, eye, cam.focus, up);
 
 	axis_draw();
 	for (int i = 0; i < scene->num_objects; i++)
@@ -125,7 +132,7 @@ static void draw(void)
 		object_t *obj = scene->objects[i];
 
 		object_draw(obj, shader, proj_mat,
-	      view_mat, object_selected == obj);
+	      view_mat, obj_cur == obj);
 		aabb_draw(obj->aabb, proj_mat, view_mat, obj->trans);
 	}
 
@@ -141,7 +148,7 @@ int main(void)
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwPollEvents();
-		mouse_input(window);
+		mouse_input(&mouse, &cam, window, obj_cur);
 		draw();
 	}
 

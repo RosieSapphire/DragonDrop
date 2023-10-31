@@ -20,10 +20,7 @@ typedef struct {
 	uint32_t flags;
 } object_t;
 
-extern object_t *object_selected;
-
-object_t *object_create_empty(void);
-object_t *object_create_tri(void);
+object_t *object_create_empty(object_t **obj_cur);
 object_t *object_create_file(const char *path);
 void object_draw(const object_t *obj, const uint32_t shader,
 		 float proj_mat[4][4], float view_mat[4][4], bool is_selected);
