@@ -123,6 +123,9 @@ scene_t *scene_create_file(__attribute__((unused))const char *path)
 		_scene_read_object(s->objects + i, f);
 	}
 
+	debugf("Loaded Scene from '%s' (num_objects=%d)\n",
+	path, s->num_objects);
+
 	return s;
 }
 
