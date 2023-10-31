@@ -19,3 +19,6 @@ $(BIN): $(OBJ)
 
 clean:
 	rm -f $(BIN) *.o
+
+betty:
+	clear; betty include/*.h src/*.c
