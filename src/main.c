@@ -20,30 +20,26 @@
 #include "mat4.h"
 #include "aabb.h"
 #include "debug.h"
+#include "camera.h"
+#include "panels.h"
+#include "mouse.h"
 
-static GLFWwindow *window = NULL;
-static struct nk_context *ctx = NULL;
+static GLFWwindow *window;
+static struct nk_context *ctx;
 static struct nk_glfw glfw = {0};
 
-static char load_buf[CONF_LOAD_BUF_MAX];
-
-static scene_t *scene = NULL;
-static uint32_t shader = 0;
-static uint32_t axis_shader = 0;
+static uint32_t shader;
+static uint32_t axis_shader;
 static float proj_mat[4][4] = {{0}};
 static float view_mat[4][4] = {{0}};
 
-static float view_angle[2] = {0, 0};
-static float focus[3] = {0, 0, 0};
-static float zoom = 3.0f;
-
-static int cull_backface = 0;
-
-static mesh_t *axis_mesh = NULL;
+static mesh_t *axis_mesh;
 
 static void init(void)
 {
 	debug_init();
+
+	cull_backface = false;
 
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -53,7 +49,6 @@ static void init(void)
 			   CONF_NAME, NULL, NULL);
 	glfwMakeContextCurrent(window);
 	debugf("Setup GLFW Context\n");
-	
 	glewExperimental = 1;
 	glewInit();
 	glViewport(0, 0, CONF_WIDTH, CONF_HEIGHT);
@@ -61,138 +56,20 @@ static void init(void)
 	ctx = nk_glfw3_init(&glfw, window, NK_GLFW3_INSTALL_CALLBACKS);
 
 	struct nk_font_atlas *atlas;
+
 	nk_glfw3_font_stash_begin(&glfw, &atlas);
 	nk_glfw3_font_stash_end(&glfw);
 	debugf("Setup Nuklear\n");
 
 	mat4_perspective(proj_mat, 75.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
-	memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	scene = scene_create_empty();
 	shader = shader_create("res/shaders/base.vert", "res/shaders/base.frag");
 	axis_shader = shader_create("res/shaders/axis.vert",
 			     "res/shaders/axis.frag");
-	const vertex_t axis_verts[6] = {
-		{{0, 0, 0}, {0, 0}, {1, 0, 0}},
-		{{1, 0, 0}, {0, 0}, {1, 0, 0}},
-		{{0, 0, 0}, {0, 0}, {0, 1, 0}},
-		{{0, 1, 0}, {0, 0}, {0, 1, 0}},
-		{{0, 0, 0}, {0, 0}, {0, 0, 1}},
-		{{0, 0, 1}, {0, 0}, {0, 0, 1}},
-	};
-
-	const uint16_t axis_indis[6] = {
-		0, 1,
-		2, 3,
-		4, 5,
-	};
-	axis_mesh = mesh_create_data(6, 6, axis_verts, axis_indis);
+	axis_mesh = mesh_create_axis();
 
 	aabb_init();
-}
-
-static void panel_props(void)
-{
-	static const int width = 420;
-	if(!nk_begin(ctx, object_selected ? object_selected->name : "null",
-	      nk_rect(0, 0, width, CONF_HEIGHT),
-	      NK_WINDOW_BORDER | NK_WINDOW_TITLE))
-		return;
-
-	nk_layout_row_dynamic(ctx, 30, 1);
-
-	/* loading object */
-	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, load_buf,
-				CONF_LOAD_BUF_MAX, nk_filter_default);
-	/* TODO: Make sure to add instancing at some point */
-	nk_layout_row_dynamic(ctx, 30, 3);
-	if(nk_button_label(ctx, "Load GLB Object")) {
-		char full_load_buf[CONF_LOAD_BUF_MAX + 11];
-		sprintf(full_load_buf, "res/models/%s", load_buf);
-		scene_object_add(scene, full_load_buf);
-		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
-		debugf("Loaded GLB Object '%s' from '%s'\n",
-	 scene->objects[scene->num_objects - 1], full_load_buf);
-	}
-
-	/* scene loading */
-	if(nk_button_label(ctx, "Load Scene")) {
-		free(scene);
-		scene = scene_create_file(load_buf);
-		object_selected = scene->objects[0];
-		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
-	}
-
-	/* scene exporting */
-	if(nk_button_label(ctx, "Save Scene")) {
-		scene_write_file(scene, load_buf);
-		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
-	}
-
-	/* object properties */
-	if(object_selected) {
-		nk_layout_row_dynamic(ctx, 30, 4);
-		nk_label(ctx, "Position", NK_TEXT_LEFT);
-		nk_property_float(ctx, "X", -INFINITY,
-		    &object_selected->trans[3][0], INFINITY, 0.001f, 0.001f);
-		nk_property_float(ctx, "Y", -INFINITY,
-		    &object_selected->trans[3][1], INFINITY, 0.001f, 0.001f);
-		nk_property_float(ctx, "Z", -INFINITY,
-		    &object_selected->trans[3][2], INFINITY, 0.001f, 0.001f);
-		nk_layout_row_dynamic(ctx, 30, 1);
-		if(nk_button_label(ctx, "Reset Position")) {
-			vector_zero(object_selected->trans[3], 3);
-			debugf("Reset Position of '%s'\n",
-	  object_selected->name);
-		}
-
-		nk_layout_row_dynamic(ctx, 30, 3);
-
-		if(nk_checkbox_flags_label(ctx, "Has Collision",
-			  &object_selected->flags, OBJ_HAS_COLLISION)) {
-			debugf("Toggled %s's collission flag %s\n",
-	  object_selected->name,
-	  (object_selected->flags & OBJ_HAS_COLLISION) ? "on" : "off");
-		}
-
-		if(nk_checkbox_flags_label(ctx, "Is Visible",
-			  &object_selected->flags, OBJ_IS_VISIBLE)) {
-			debugf("Toggled %s's visibility flag %s\n",
-	  object_selected->name,
-	  (object_selected->flags & OBJ_IS_VISIBLE) ? "on" : "off");
-		}
-
-		if(nk_checkbox_flags_label(ctx, "Is Pickup",
-			  &object_selected->flags, OBJ_IS_PICKUP)) {
-			debugf("Toggled %s's pickup flag %s\n",
-	  object_selected->name,
-	  (object_selected->flags & OBJ_IS_PICKUP) ? "on" : "off");
-		}
-	}
-
-
-	nk_layout_row_dynamic(ctx, 30, 1);
-	nk_label(ctx, "Global", NK_TEXT_LEFT);
-	nk_checkbox_label(ctx, "Backface Culling", &cull_backface);
-	nk_end(ctx);
-}
-
-static void panel_list(void)
-{
-	static const int width = 240;
-	if(!nk_begin(ctx, "Object List", nk_rect(CONF_WIDTH - width, 0, width,
-					(CONF_HEIGHT >> 1) * 1.5f),
-	      NK_WINDOW_TITLE | NK_WINDOW_BORDER))
-		return;
-
-	nk_layout_row_dynamic(ctx, 30, 1);
-	for(int i = 0; i < scene->num_objects; i++) {
-		object_t *obj = scene->objects[i];
-		if(nk_option_label(ctx, obj->name, obj == object_selected)) {
-			object_selected = obj;
-		}
-	}
-
-	nk_end(ctx);
+	panels_init();
 }
 
 static void axis_draw(void)
@@ -201,6 +78,7 @@ static void axis_draw(void)
 	glUseProgram(axis_shader);
 	const uint32_t proj_loc = glGetUniformLocation(axis_shader, "u_proj");
 	const uint32_t view_loc = glGetUniformLocation(axis_shader, "u_view");
+
 	glUniformMatrix4fv(proj_loc, 1, GL_FALSE, (const float *)proj_mat);
 	glUniformMatrix4fv(view_loc, 1, GL_FALSE, (const float *)view_mat);
 
@@ -212,27 +90,20 @@ static void axis_draw(void)
 	glBindVertexArray(0);
 }
 
-static void camera_eye(float *out)
-{
-	const float cosv1 = cosf(view_angle[1]);
-	vector_copy(focus, out, 3);
-	out[0] += cosf(view_angle[0]) * cosv1 * zoom;
-	out[1] += sinf(view_angle[0]) * cosv1 * zoom;
-	out[2] += sinf(view_angle[1]) * zoom;
-}
-
 static void draw(void)
 {
 	nk_glfw3_new_frame(&glfw);
-	panel_props();
-	panel_list();
+	panel_props(ctx);
+	panel_list(ctx);
 	debug_panel(ctx);
 
-	if(cull_backface) {
+	if (cull_backface)
+	{
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 		glFrontFace(GL_CCW);
-	} else {
+	} else
+	{
 		glDisable(GL_CULL_FACE);
 	}
 
@@ -243,12 +114,16 @@ static void draw(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	float eye[3];
+	float up[3] = {0, 0, 1};
+
 	camera_eye(eye);
-	mat4_lookat(view_mat, eye, focus, (float[3]){0, 0, 1});
+	mat4_lookat(view_mat, eye, camera_focus, up);
 
 	axis_draw();
-	for(int i = 0; i < scene->num_objects; i++) {
+	for (int i = 0; i < scene->num_objects; i++)
+	{
 		object_t *obj = scene->objects[i];
+
 		object_draw(obj, shader, proj_mat,
 	      view_mat, object_selected == obj);
 		aabb_draw(obj->aabb, proj_mat, view_mat, obj->trans);
@@ -259,216 +134,17 @@ static void draw(void)
 	glfwSwapBuffers(window);
 }
 
-enum input_mode {
-	IMODE_NORMAL,
-	IMODE_MOVE,
-	IMODE_ROTATE,
-	IMODE_SCALE,
-	IMODE_NUM_STATES,
-};
-
-static enum input_mode input_mode = IMODE_NORMAL;
-static double mouse_last[2] = {0, 0};
-
-static void mouse_input_orbiting(void)
-{
-	if(!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT))
-		return;
-
-	double mouse_now[2];
-	glfwGetCursorPos(window, mouse_now + 0, mouse_now + 1);
-	double mouse_delta[2] = {
-		mouse_now[0] - mouse_last[0],
-		mouse_now[1] - mouse_last[1],
-	};
-	mouse_last[0] = mouse_now[0];
-	mouse_last[1] = mouse_now[1];
-	view_angle[0] += mouse_delta[0] * 0.02f;
-	view_angle[1] += mouse_delta[1] * 0.02f;
-	view_angle[1] = clampf(view_angle[1], -1.5f, 1.5f);
-}
-
-static void mouse_input_zooming(void)
-{
-	if(!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE))
-		return;
-
-	double mouse_y_now;
-	glfwGetCursorPos(window, NULL, &mouse_y_now);
-	double mouse_y_delta = mouse_y_now - mouse_last[1];
-	mouse_last[1] = mouse_y_now;
-	zoom += mouse_y_delta * 0.01f;
-	zoom = fmaxf(zoom, 0);
-}
-
-static void camera_forw_side_up(float *eye, float *forw, float *side, float *up)
-{
-	vector_subtract(focus, eye, forw, 3);
-	vector_normalize(forw, 3);
-	float up1[3] = {0, 0, 1};
-	vector3_cross(forw, up1, side);
-	vector3_cross(forw, side, up);
-	vector_negate(up, 3);
-}
-
-static void mouse_input_panning(void)
-{
-	if(!glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT)) {
-		return;
-	}
-
-	double mouse_now[2];
-	glfwGetCursorPos(window, mouse_now + 0, mouse_now + 1);
-
-	if(mouse_now[0] <= 420 || mouse_now[0] >= CONF_WIDTH - 240) {
-		return;
-	}
-
-	double mouse_delta[2] = {
-		mouse_now[0] - mouse_last[0],
-		mouse_now[1] - mouse_last[1],
-	};
-
-	float eye[3] = {0, 0, 0};
-	camera_eye(eye);
-	float forw[3], side[3], up[3];
-	camera_forw_side_up(eye, forw, side, up);
-	float move[3];
-	vector_scale(up, mouse_delta[1] * 0.02f, 3);
-	vector_scale(side, mouse_delta[0] * 0.02f, 3);
-	vector_add(up, side, move, 3);
-
-	vector_add(focus, move, focus, 3);
-}
-
-static int axis_move = -1;
-static void mouse_input_moving(void)
-{
-	static int axis_key_last[3] = {0, 0, 0};
-	int axis_key_now[3] = {
-		glfwGetKey(window, GLFW_KEY_X),
-		glfwGetKey(window, GLFW_KEY_Y),
-		glfwGetKey(window, GLFW_KEY_Z),
-	};
-
-	for(int i = 0; i < 3; i++) {
-		if(!axis_key_last[i] && axis_key_now[i]) {
-			if(i == axis_move) {
-				axis_move = -1;
-			} else {
-				axis_move = i;
-			}
-		}
-		axis_key_last[i] = axis_key_now[i];
-	}
-
-	double mouse_now[2];
-	glfwGetCursorPos(window, mouse_now + 0, mouse_now + 1);
-	double mouse_delta[2] = {
-		mouse_now[0] - mouse_last[0],
-		mouse_now[1] - mouse_last[1],
-	};
-	mouse_last[0] = mouse_now[0];
-	mouse_last[1] = mouse_now[1];
-
-	float *obj_pos = object_selected->trans[3];
-
-	float cam_eye[3], forw[3], side[3], up[3];
-	camera_eye(cam_eye);
-	camera_forw_side_up(cam_eye, forw, side, up);
-	vector_scale(up, -mouse_delta[1] * 0.02f, 3);
-	vector_scale(side, -mouse_delta[0] * 0.02f, 3);
-	float move[3];
-	vector_add(up, side, move, 3);
-
-	switch(axis_move) {
-	case -1:
-		break;
-
-	case 0:
-		move[0] *= 1;
-		move[1] *= 0;
-		move[2] *= 0;
-		break;
-	
-	case 1:                             
-		move[0] *= 0;
-		move[1] *= 1;
-		move[2] *= 0;
-		break;
-
-	case 2:                             
-		move[0] *= 0;
-		move[1] *= 0;
-		move[2] *= 1;
-		break;
-	}
-
-	vector_add(obj_pos, move, obj_pos, 3);
-}
-
-static void mouse_input(void)
-{
-	static int key_g_last = 0;
-	static int right_click_last = 0;
-	int key_g_now = glfwGetKey(window, GLFW_KEY_G);
-	int right_click_now =
-		glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
-	static float last_normal_pos[3] = {0, 0, 0};
-	switch(input_mode) {
-	case IMODE_NORMAL:
-		mouse_input_orbiting();
-		mouse_input_zooming();
-		mouse_input_panning();
-		if(key_g_now && !key_g_last && object_selected) {
-			vector_copy(object_selected->trans[3],
-				last_normal_pos, 3);
-			input_mode = IMODE_MOVE;
-		}
-		break;
-
-	case IMODE_MOVE:
-		mouse_input_moving();
-		if((key_g_now && !key_g_last) ||
-				glfwGetMouseButton(window,
-			GLFW_MOUSE_BUTTON_LEFT)) {
-			axis_move = -1;
-			input_mode = IMODE_NORMAL;
-		}
-
-		if((right_click_now && !right_click_last) ||
-				glfwGetKey(window, GLFW_KEY_ESCAPE)) {
-			axis_move = -1;
-			input_mode = IMODE_NORMAL;
-			vector_copy(last_normal_pos,
-	       				object_selected->trans[3], 3);
-		}
-		break;
-
-	default:
-		break;
-	}
-	key_g_last = key_g_now;
-	right_click_last = right_click_now;
-
-	glfwGetCursorPos(window, mouse_last + 0, mouse_last + 1);
-}
-
-static void terminate(void)
-{
-	glfwTerminate();
-}
-
 int main(void)
 {
 	init();
 
-	while(!glfwWindowShouldClose(window)) {
+	while (!glfwWindowShouldClose(window))
+	{
 		glfwPollEvents();
-		mouse_input();
+		mouse_input(window);
 		draw();
 	}
 
-	terminate();
-	return 0;
+	glfwTerminate();
+	return (0);
 }

@@ -9,6 +9,8 @@
 #include "debug.h"
 #include "scene.h"
 
+scene_t *scene;
+
 scene_t *scene_create_empty(void)
 {
 	scene_t *s = malloc(sizeof(scene_t));

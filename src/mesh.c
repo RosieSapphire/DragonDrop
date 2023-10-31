@@ -71,6 +71,26 @@ mesh_t *mesh_create_tri(void)
 	return m;
 }
 
+mesh_t *mesh_create_axis(void)
+{
+	const vertex_t verts[6] = {
+		{{0, 0, 0}, {0, 0}, {1, 0, 0}},
+		{{1, 0, 0}, {0, 0}, {1, 0, 0}},
+		{{0, 0, 0}, {0, 0}, {0, 1, 0}},
+		{{0, 1, 0}, {0, 0}, {0, 1, 0}},
+		{{0, 0, 0}, {0, 0}, {0, 0, 1}},
+		{{0, 0, 1}, {0, 0}, {0, 0, 1}},
+	};
+
+	const uint16_t indis[6] = {
+		0, 1,
+		2, 3,
+		4, 5,
+	};
+
+	return mesh_create_data(6, 6, verts, indis);
+}
+
 mesh_t *mesh_create_data(const uint16_t num_verts, const uint16_t num_indis,
 			 const vertex_t *verts, const uint16_t *indis)
 {
