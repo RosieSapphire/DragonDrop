@@ -49,7 +49,7 @@ void mouse_object_moving(mouse_t *m, camera_t *c,
 
 	if (m->axis_move != -1)
 		for (int i = 0; i < 3; i++)
-			move[i] += move_axis[m->axis_move][i];
+			move[i] *= move_axis[m->axis_move][i];
 
 	vector_add(obj_cur->trans[3], move, obj_cur->trans[3], 3);
 }
