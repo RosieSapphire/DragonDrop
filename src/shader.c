@@ -10,30 +10,37 @@
 static unsigned int _shader_compile(const char *path, unsigned int type)
 {
 	FILE *f = fopen(path, "r");
+	size_t fsize;
+	char *buf;
+
 	assert(f);
 	fseek(f, 0, SEEK_END);
-	size_t fsize = ftell(f);
+	fsize = ftell(f);
 	rewind(f);
-	char *buf = malloc(fsize);
+	buf = malloc(fsize);
 	fread(buf, sizeof(char), fsize, f);
 	buf[fsize - 1] = 0;
 	fclose(f);
 
 	unsigned int shader = glCreateShader(type);
+
 	glShaderSource(shader, 1, (const char **)&buf, NULL);
 	glCompileShader(shader);
 
 	int status;
+
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-	if(!status) {
+	if (!status)
+	{
 		char log[512];
+
 		glGetShaderInfoLog(shader, 512, NULL, log);
 		fprintf(stderr, "Failed to compile shader from '%s': %s\n",
 				path, log);
 		exit(1);
 	}
 
-	return shader;
+	return (shader);
 }
 
 unsigned int shader_create(const char *vpath, const char *fpath)
@@ -47,9 +54,12 @@ unsigned int shader_create(const char *vpath, const char *fpath)
 	glLinkProgram(program);
 
 	int status;
+
 	glGetProgramiv(program, GL_LINK_STATUS, &status);
-	if(!status) {
+	if (!status)
+	{
 		char log[512];
+
 		glGetProgramInfoLog(program, 512, NULL, log);
 		debugf("Failed to link program: %s\n", log);
 		exit(1);
@@ -57,15 +67,10 @@ unsigned int shader_create(const char *vpath, const char *fpath)
 
 	debugf("Loaded Shader (%s, %s)\n", vpath, fpath);
 
-	return program;
+	return (program);
 }
 
 void shader_destroy(unsigned int s)
 {
 	glDeleteProgram(s);
-}
-
-void shader_use(unsigned int s)
-{
-	glUseProgram(s);
 }

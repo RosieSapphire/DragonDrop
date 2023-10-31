@@ -25,7 +25,8 @@ typedef struct
 /* general */
 void mouse_init(mouse_t *m);
 void mouse_get_delta(mouse_t *m, GLFWwindow *win, double *mnow, double *md);
-void mouse_input(mouse_t *m, camera_t *c, GLFWwindow *window, object_t *obj_cur);
+void mouse_input(mouse_t *m, camera_t *c,
+		 GLFWwindow *window, object_t *obj_cur);
 
 /* camera */
 void mouse_camera_orbiting(mouse_t *m, camera_t *c, GLFWwindow *window);

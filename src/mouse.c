@@ -36,13 +36,13 @@ static void _mouse_input_normal(mouse_t *m, camera_t *c,
 	mouse_camera_panning(m, c, window);
 	if (key_g_now && !key_g_last && obj_cur)
 	{
-		memcpy(last_normal_pos, obj_cur->trans[3],
-			sizeof(float) * 3);
+		vector_copy(last_normal_pos, obj_cur->trans[3], 3);
 		m->input_mode = IMODE_MOVE;
 	}
 }
 
-void mouse_input(mouse_t *m, camera_t *c, GLFWwindow *window, object_t *obj_cur)
+void mouse_input(mouse_t *m, camera_t *c,
+		 GLFWwindow *window, object_t *obj_cur)
 {
 	static int right_click_last;
 	int key_g_now = glfwGetKey(window, GLFW_KEY_G);
@@ -70,8 +70,7 @@ void mouse_input(mouse_t *m, camera_t *c, GLFWwindow *window, object_t *obj_cur)
 		{
 			m->axis_move = -1;
 			m->input_mode = IMODE_NORMAL;
-			memcpy(obj_cur->trans[3], last_normal_pos,
-				sizeof(float) * 3);
+			vector_copy(obj_cur->trans[3], last_normal_pos, 3);
 		}
 		break;
 

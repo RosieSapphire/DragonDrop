@@ -10,33 +10,46 @@
 #include "debug.h"
 #include "object.h"
 
-object_t *object_create_empty(object_t **obj_cur)
+static const int aiflags = aiProcess_Triangulate | aiProcess_OptimizeMeshes |
+	aiProcess_ImproveCacheLocality | aiProcess_JoinIdenticalVertices |
+	aiProcess_RemoveRedundantMaterials | aiProcess_FlipWindingOrder;
+
+static void _object_load_file_verts(const uint16_t num_verts, vertex_t *verts,
+				    const struct aiMesh *aimesh)
 {
-	object_t *obj = malloc(sizeof(object_t));
-	obj->flags = 0;
-	obj->mesh = NULL;
-	mat4_identity(obj->trans);
-	strncpy(obj->name, "Nothing", CONF_NAME_MAX);
-	*obj_cur = obj;
-	return obj;
+	for (int i = 0; i < num_verts; i++)
+	{
+		vertex_t *vert = verts + i;
+
+		vector_copy(vert->pos, (float *)(aimesh->mVertices) + i, 3);
+		vector_copy(vert->uv, (float *)(aimesh->mTextureCoords[0]) + i, 2);
+		vector_copy(vert->norm, (float *)(aimesh->mNormals) + i, 3);
+	}
 }
 
-object_t *object_create_file(const char *path)
+static void _object_load_file_indis(const uint16_t num_indis, uint16_t *indis,
+				    const struct aiMesh *aimesh)
 {
-	const int flags = aiProcess_Triangulate | aiProcess_OptimizeMeshes |
-		aiProcess_ImproveCacheLocality |
-		aiProcess_JoinIdenticalVertices |
-		aiProcess_RemoveRedundantMaterials | aiProcess_FlipWindingOrder;
-	const struct aiScene *scene = aiImportFile(path, flags);
+	for (int i = 0; i < num_indis / 3; i++)
+		for (int j = 0; j < 3; j++)
+			indis[3 * i + j] = aimesh->mFaces[i].mIndices[j];
+}
+
+object_t *object_load_file(const char *path)
+{
+	const struct aiScene *scene = aiImportFile(path, aiflags);
 	object_t *obj = NULL;
-	if(!scene) {
+
+	if (!scene)
+	{
 		debugf("Failed to Load Object '%s'\n", path);
-		return NULL;
+		return (NULL);
 	}
 
-	if(!scene->mNumMeshes) {
+	if (!scene->mNumMeshes)
+	{
 		debugf("Object '%s' has No Meshes.\n", path);
-		return NULL;
+		return (NULL);
 	}
 
 	debugf("Loaded Object '%s'\n", path);
@@ -45,45 +58,29 @@ object_t *object_create_file(const char *path)
 	obj->flags = OBJ_HAS_COLLISION | OBJ_IS_VISIBLE;
 
 	const struct aiMesh *aimesh = scene->mMeshes[0];
-	strncpy(obj->name, aimesh->mName.data, CONF_NAME_MAX);
-
 	const uint16_t num_verts = aimesh->mNumVertices;
-	vertex_t *verts = malloc(sizeof(vertex_t) * num_verts);
-	for(int i = 0; i < num_verts; i++) {
-		vertex_t *vert = verts + i;
-		vert->pos[0] = aimesh->mVertices[i].x;
-		vert->pos[1] = aimesh->mVertices[i].y;
-		vert->pos[2] = aimesh->mVertices[i].z;
-		vert->uv[0] = aimesh->mTextureCoords[0][i].x;
-		vert->uv[1] = aimesh->mTextureCoords[0][i].y;
-		vert->norm[0] = aimesh->mNormals[i].x;
-		vert->norm[1] = aimesh->mNormals[i].y;
-		vert->norm[2] = aimesh->mNormals[i].z;
-	}
-
 	const uint16_t num_indis = aimesh->mNumFaces * 3;
+	vertex_t *verts = malloc(sizeof(vertex_t) * num_verts);
 	uint16_t *indis = malloc(sizeof(uint16_t) * num_indis);
-	for(int i = 0; i < num_indis / 3; i++) {
-		for(int j = 0; j < 3; j++) {
-			uint16_t *indi = indis + (3 * i) + j;
-			*indi = aimesh->mFaces[i].mIndices[j];
-		}
-	}
+
+	strncpy(obj->name, aimesh->mName.data, CONF_NAME_MAX);
+	_object_load_file_verts(num_verts, verts, aimesh);
+	_object_load_file_indis(num_indis, indis, aimesh);
 
 	obj->mesh = mesh_create_data(num_verts, num_indis, verts, indis);
 	obj->aabb = aabb_from_mesh(obj->mesh);
 	mat4_identity(obj->trans);
-
 	free(verts);
 	free(indis);
 
-	return obj;
+	return (obj);
 }
 
 void object_draw(const object_t *obj, const uint32_t shader,
-		 float proj_mat[4][4], float view_mat[4][4], bool is_selected)
+		 float proj_mat[4][4], float view_mat[4][4],
+		 bool is_selected, bool cull_backface)
 {
-	if(!(obj->flags & OBJ_IS_VISIBLE))
+	if (!(obj->flags & OBJ_IS_VISIBLE))
 		return;
 
 	glUseProgram(shader);
@@ -96,7 +93,7 @@ void object_draw(const object_t *obj, const uint32_t shader,
 	glUniformMatrix4fv(view_loc, 1, GL_FALSE, (const float *)view_mat);
 	glUniformMatrix4fv(model_loc, 1, GL_FALSE, (const float *)obj->trans);
 	glUniform1i(is_selected_loc, is_selected);
-	mesh_draw(obj->mesh);
+	mesh_draw(obj->mesh, cull_backface);
 }
 
 void object_destroy(object_t *o)

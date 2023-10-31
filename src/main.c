@@ -8,8 +8,8 @@
 #define NK_INCLUDE_FONT_BAKING
 #define NK_IMPLEMENTATION
 #define NK_GLFW_GL3_IMPLEMENTATION
-#include "nuklear.h"
-#include "nuklear_glfw_gl3.h"
+#include "nuklear/nuklear.h"
+#include "nuklear/nuklear_glfw_gl3.h"
 
 #include "config.h"
 #include "util.h"
@@ -29,6 +29,7 @@ static struct nk_context *ctx;
 static struct nk_glfw glfw = {0};
 static mouse_t mouse;
 static camera_t cam;
+static scene_t *scene;
 
 static object_t *obj_cur;
 
@@ -38,6 +39,8 @@ static float proj_mat[4][4] = {{0}};
 static float view_mat[4][4] = {{0}};
 
 static mesh_t *axis_mesh;
+
+static int cull_backface;
 
 static void init(void)
 {
@@ -100,19 +103,9 @@ static void axis_draw(void)
 static void draw(void)
 {
 	nk_glfw3_new_frame(&glfw);
-	panel_props(ctx, &obj_cur);
-	panel_list(ctx, &obj_cur);
+	panel_props(ctx, &obj_cur, &scene, &cull_backface);
+	panel_list(ctx, &obj_cur, &scene);
 	debug_panel(ctx);
-
-	if (cull_backface)
-	{
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(GL_CCW);
-	} else
-	{
-		glDisable(GL_CULL_FACE);
-	}
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -132,7 +125,7 @@ static void draw(void)
 		object_t *obj = scene->objects[i];
 
 		object_draw(obj, shader, proj_mat,
-	      view_mat, obj_cur == obj);
+	      view_mat, obj_cur == obj, cull_backface);
 		aabb_draw(obj->aabb, proj_mat, view_mat, obj->trans);
 	}
 

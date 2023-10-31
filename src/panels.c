@@ -3,7 +3,7 @@
 #include <malloc.h>
 #include <math.h>
 
-#include "nuklear.h"
+#include "nuklear/nuklear.h"
 #include "config.h"
 #include "object.h"
 #include "scene.h"
@@ -13,15 +13,13 @@
 
 static char load_buf[CONF_LOAD_BUF_MAX];
 
-int cull_backface;
-
 void panels_init(void)
 {
 	memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 }
 
 static void _panel_props_load_and_export(struct nk_context *ctx,
-					 object_t **obj_cur)
+					 object_t **obj_cur, scene_t **s)
 {
 	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, load_buf,
 				CONF_LOAD_BUF_MAX, nk_filter_default);
@@ -32,24 +30,24 @@ static void _panel_props_load_and_export(struct nk_context *ctx,
 		char full_load_buf[CONF_LOAD_BUF_MAX + 11];
 
 		sprintf(full_load_buf, "res/models/%s", load_buf);
-		scene_object_add(scene, full_load_buf);
-		*obj_cur = scene->objects[scene->num_objects - 1];
+		scene_object_add(*s, full_load_buf);
+		*obj_cur = (*s)->objects[(*s)->num_objects - 1];
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 		debugf("Loaded GLB Object '%s' from '%s'\n",
-	 scene->objects[scene->num_objects - 1], full_load_buf);
+	 (*s)->objects[(*s)->num_objects - 1], full_load_buf);
 	}
 
 	if (nk_button_label(ctx, "Load Scene"))
 	{
-		free(scene);
-		scene = scene_create_file(load_buf);
-		*obj_cur = scene->objects[0];
+		free(*s);
+		(*s) = scene_read_file(load_buf);
+		*obj_cur = (*s)->objects[0];
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	}
 
 	if (nk_button_label(ctx, "Save Scene"))
 	{
-		scene_write_file(scene, load_buf);
+		scene_write_file((*s), load_buf);
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	}
 }
@@ -70,7 +68,7 @@ static void _panel_props_object(struct nk_context *ctx, object_t *obj_cur)
 	nk_layout_row_dynamic(ctx, 30, 1);
 	if (nk_button_label(ctx, "Reset Position"))
 	{
-		memset(obj_cur->trans[3], 0, sizeof(float) * 3);
+		vector_zero(obj_cur->trans[3], 3);
 		debugf("Reset Position of '%s'\n", obj_cur->name);
 	}
 
@@ -95,7 +93,8 @@ static void _panel_props_object(struct nk_context *ctx, object_t *obj_cur)
 	 obj_name, (obj_flags & OBJ_IS_PICKUP) ? "on" : "off");
 }
 
-void panel_props(void *ctxin, object_t **obj_cur)
+void panel_props(void *ctxin, object_t **obj_cur,
+		 scene_t **s, int *cull_backface)
 {
 	struct nk_context *ctx = ctxin;
 	static const int width = 420;
@@ -106,16 +105,16 @@ void panel_props(void *ctxin, object_t **obj_cur)
 		return;
 
 	nk_layout_row_dynamic(ctx, 30, 1);
-	_panel_props_load_and_export(ctx, obj_cur);
+	_panel_props_load_and_export(ctx, obj_cur, s);
 	_panel_props_object(ctx, *obj_cur);
 
 	nk_layout_row_dynamic(ctx, 30, 1);
 	nk_label(ctx, "Global", NK_TEXT_LEFT);
-	nk_checkbox_label(ctx, "Backface Culling", &cull_backface);
+	nk_checkbox_label(ctx, "Backface Culling", cull_backface);
 	nk_end(ctx);
 }
 
-void panel_list(void *ctxin, object_t **obj_cur)
+void panel_list(void *ctxin, object_t **obj_cur, scene_t **s)
 {
 	struct nk_context *ctx = ctxin;
 	static const int width = 240;
@@ -126,9 +125,9 @@ void panel_list(void *ctxin, object_t **obj_cur)
 		return;
 
 	nk_layout_row_dynamic(ctx, 30, 1);
-	for (int i = 0; i < scene->num_objects; i++)
+	for (int i = 0; i < (*s)->num_objects; i++)
 	{
-		object_t *obj = scene->objects[i];
+		object_t *obj = (*s)->objects[i];
 
 		if (nk_option_label(ctx, obj->name, obj == *obj_cur))
 			*obj_cur = obj;

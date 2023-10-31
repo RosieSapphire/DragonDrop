@@ -4,7 +4,7 @@
 
 #include "mesh.h"
 
-static void _mesh_setup_buffers(mesh_t *m)
+void mesh_gen_buffers(mesh_t *m)
 {
 	glGenVertexArrays(1, &m->vao);
 	glBindVertexArray(m->vao);
@@ -69,13 +69,23 @@ mesh_t *mesh_create_data(const uint16_t num_verts, const uint16_t num_indis,
 	m->indis = malloc(indis_size);
 	memcpy(m->indis, indis, indis_size);
 
-	_mesh_setup_buffers(m);
+	mesh_gen_buffers(m);
 
 	return (m);
 }
 
-void mesh_draw(mesh_t *m)
+void mesh_draw(mesh_t *m, bool cull_backface)
 {
+	if (cull_backface)
+	{
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		glFrontFace(GL_CCW);
+	} else
+	{
+		glDisable(GL_CULL_FACE);
+	}
+
 	glBindVertexArray(m->vao);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glDrawElements(GL_TRIANGLES, m->num_indis, GL_UNSIGNED_SHORT, m->indis);

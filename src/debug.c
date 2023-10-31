@@ -3,7 +3,7 @@
 #include <malloc.h>
 #include <string.h>
 
-#include "nuklear.h"
+#include "nuklear/nuklear.h"
 #include "debug.h"
 
 static int num_mesg;

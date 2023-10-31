@@ -14,7 +14,7 @@ void camera_eye(const camera_t *c, float *out)
 {
 	const float cosv1 = cosf(c->view_angle[1]);
 
-	memcpy(out, c->focus, sizeof(float) * 3);
+	vector_copy(out, c->focus, 3);
 	out[0] += cosf(c->view_angle[0]) * cosv1 * c->zoom;
 	out[1] += sinf(c->view_angle[0]) * cosv1 * c->zoom;
 	out[2] += sinf(c->view_angle[1]) * c->zoom;
