@@ -6,6 +6,7 @@
 
 #include "mat4.h"
 #include "util.h"
+#include "debug.h"
 #include "scene.h"
 
 scene_t *scene_create_empty(void)
@@ -13,6 +14,7 @@ scene_t *scene_create_empty(void)
 	scene_t *s = malloc(sizeof(scene_t));
 	s->num_objects = 0;
 	s->objects = malloc(0);
+	debugf("Setup Empty Scene.\n");
 	return s;
 }
 
@@ -107,7 +109,7 @@ scene_t *scene_create_file(__attribute__((unused))const char *path)
 {
 	FILE *f = fopen(path, "rb");
 	if(!f) {
-		fprintf(stderr, "Failed to load scene from '%s'\n", path);
+		debugf("Failed to load scene from '%s'\n", path);
 		exit(1);
 	}
 

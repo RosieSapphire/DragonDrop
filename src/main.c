@@ -19,6 +19,7 @@
 #include "object.h"
 #include "mat4.h"
 #include "aabb.h"
+#include "debug.h"
 
 static GLFWwindow *window = NULL;
 static struct nk_context *ctx = NULL;
@@ -42,6 +43,8 @@ static mesh_t *axis_mesh = NULL;
 
 static void init(void)
 {
+	debug_init();
+
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -49,23 +52,23 @@ static void init(void)
 	window = glfwCreateWindow(CONF_WIDTH, CONF_HEIGHT,
 			   CONF_NAME, NULL, NULL);
 	glfwMakeContextCurrent(window);
+	debugf("Setup GLFW Context\n");
 	
 	glewExperimental = 1;
 	glewInit();
 	glViewport(0, 0, CONF_WIDTH, CONF_HEIGHT);
+	debugf("Setup GLEW\n");
 	ctx = nk_glfw3_init(&glfw, window, NK_GLFW3_INSTALL_CALLBACKS);
 
 	struct nk_font_atlas *atlas;
 	nk_glfw3_font_stash_begin(&glfw, &atlas);
 	nk_glfw3_font_stash_end(&glfw);
+	debugf("Setup Nuklear\n");
 
-	shader = shader_create("res/shaders/base.vert", "res/shaders/base.frag");
 	mat4_perspective(proj_mat, 75.0f, CONF_ASPECT, CONF_NEAR, CONF_FAR);
-
-	strncpy(load_buf, "pistol.glb", CONF_LOAD_BUF_MAX);
-	// memset(load_buf, 0, CONF_LOAD_BUF_MAX);
-	
+	memset(load_buf, 0, CONF_LOAD_BUF_MAX);
 	scene = scene_create_empty();
+	shader = shader_create("res/shaders/base.vert", "res/shaders/base.frag");
 	axis_shader = shader_create("res/shaders/axis.vert",
 			     "res/shaders/axis.frag");
 	const vertex_t axis_verts[6] = {
@@ -101,12 +104,14 @@ static void panel_props(void)
 	nk_edit_string_zero_terminated(ctx, NK_EDIT_FIELD, load_buf,
 				CONF_LOAD_BUF_MAX, nk_filter_default);
 	/* TODO: Make sure to add instancing at some point */
-	nk_layout_row_dynamic(ctx, 30, 2);
+	nk_layout_row_dynamic(ctx, 30, 3);
 	if(nk_button_label(ctx, "Load GLB Object")) {
 		char full_load_buf[CONF_LOAD_BUF_MAX + 11];
 		sprintf(full_load_buf, "res/models/%s", load_buf);
 		scene_object_add(scene, full_load_buf);
 		memset(load_buf, 0, CONF_LOAD_BUF_MAX);
+		debugf("Loaded GLB Object '%s' from '%s'\n",
+	 scene->objects[scene->num_objects - 1], full_load_buf);
 	}
 
 	/* scene loading */
@@ -136,15 +141,32 @@ static void panel_props(void)
 		nk_layout_row_dynamic(ctx, 30, 1);
 		if(nk_button_label(ctx, "Reset Position")) {
 			vector_zero(object_selected->trans[3], 3);
+			debugf("Reset Position of '%s'\n",
+	  object_selected->name);
 		}
 
 		nk_layout_row_dynamic(ctx, 30, 3);
-		nk_checkbox_flags_label(ctx, "Has Collision",
-			  &object_selected->flags, OBJ_HAS_COLLISION);
-		nk_checkbox_flags_label(ctx, "Is Visible",
-			  &object_selected->flags, OBJ_IS_VISIBLE);
-		nk_checkbox_flags_label(ctx, "Is Pickup",
-			  &object_selected->flags, OBJ_IS_PICKUP);
+
+		if(nk_checkbox_flags_label(ctx, "Has Collision",
+			  &object_selected->flags, OBJ_HAS_COLLISION)) {
+			debugf("Toggled %s's collission flag %s\n",
+	  object_selected->name,
+	  (object_selected->flags & OBJ_HAS_COLLISION) ? "on" : "off");
+		}
+
+		if(nk_checkbox_flags_label(ctx, "Is Visible",
+			  &object_selected->flags, OBJ_IS_VISIBLE)) {
+			debugf("Toggled %s's visibility flag %s\n",
+	  object_selected->name,
+	  (object_selected->flags & OBJ_IS_VISIBLE) ? "on" : "off");
+		}
+
+		if(nk_checkbox_flags_label(ctx, "Is Pickup",
+			  &object_selected->flags, OBJ_IS_PICKUP)) {
+			debugf("Toggled %s's pickup flag %s\n",
+	  object_selected->name,
+	  (object_selected->flags & OBJ_IS_PICKUP) ? "on" : "off");
+		}
 	}
 
 
@@ -158,8 +180,8 @@ static void panel_list(void)
 {
 	static const int width = 240;
 	if(!nk_begin(ctx, "Object List", nk_rect(CONF_WIDTH - width, 0, width,
-					CONF_HEIGHT), NK_WINDOW_TITLE |
-		NK_WINDOW_BORDER))
+					(CONF_HEIGHT >> 1) * 1.5f),
+	      NK_WINDOW_TITLE | NK_WINDOW_BORDER))
 		return;
 
 	nk_layout_row_dynamic(ctx, 30, 1);
@@ -204,6 +226,7 @@ static void draw(void)
 	nk_glfw3_new_frame(&glfw);
 	panel_props();
 	panel_list();
+	debug_panel(ctx);
 
 	if(cull_backface) {
 		glEnable(GL_CULL_FACE);

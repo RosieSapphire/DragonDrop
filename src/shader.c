@@ -4,6 +4,7 @@
 #include <malloc.h>
 #include <GL/glew.h>
 
+#include "debug.h"
 #include "shader.h"
 
 static unsigned int _shader_compile(const char *path, unsigned int type)
@@ -50,9 +51,11 @@ unsigned int shader_create(const char *vpath, const char *fpath)
 	if(!status) {
 		char log[512];
 		glGetProgramInfoLog(program, 512, NULL, log);
-		fprintf(stderr, "Failed to link program: %s\n", log);
+		debugf("Failed to link program: %s\n", log);
 		exit(1);
 	}
+
+	debugf("Loaded Shader (%s, %s)\n", vpath, fpath);
 
 	return program;
 }

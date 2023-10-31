@@ -7,6 +7,7 @@
 
 #include "vector.h"
 #include "mat4.h"
+#include "debug.h"
 #include "object.h"
 
 object_t *object_selected = NULL;
@@ -24,7 +25,7 @@ object_t *object_create_empty(void)
 
 object_t *object_create_tri(void)
 {
-	printf("Generating Triangle...\n");
+	debugf("Generating Triangle\n");
 
 	object_t *obj = malloc(sizeof(object_t));
 	strncpy(obj->name, "Triangle", CONF_NAME_MAX);
@@ -46,16 +47,16 @@ object_t *object_create_file(const char *path)
 	const struct aiScene *scene = aiImportFile(path, flags);
 	object_t *obj = NULL;
 	if(!scene) {
-		fprintf(stderr, "Failed to open object scene '%s'\n", path);
+		debugf("Failed to Load Object '%s'\n", path);
 		return NULL;
 	}
 
 	if(!scene->mNumMeshes) {
-		fprintf(stderr, "'%s' does not have any meshes.\n", path);
+		debugf("Object '%s' has No Meshes.\n", path);
 		return NULL;
 	}
 
-	printf("Opened object scene '%s'\n", path);
+	debugf("Loaded Object '%s'\n", path);
 
 	obj = malloc(sizeof(object_t));
 	obj->flags = OBJ_HAS_COLLISION | OBJ_IS_VISIBLE;
@@ -118,7 +119,7 @@ void object_draw(const object_t *obj, const uint32_t shader,
 
 void object_destroy(object_t *o)
 {
-	printf("Destroying Triangle...\n");
+	debugf("Destroying Triangle\n");
 	o->flags = 0;
 	mesh_destroy(o->mesh);
 	free(o);
