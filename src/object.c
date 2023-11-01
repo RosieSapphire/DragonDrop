@@ -21,9 +21,10 @@ static void _object_load_file_verts(const uint16_t num_verts, vertex_t *verts,
 	{
 		vertex_t *vert = verts + i;
 
-		vector_copy(vert->pos, (float *)(aimesh->mVertices) + i, 3);
-		vector_copy(vert->uv, (float *)(aimesh->mTextureCoords[0]) + i, 2);
-		vector_copy(vert->norm, (float *)(aimesh->mNormals) + i, 3);
+		vector_copy(vert->pos, (float *)(aimesh->mVertices + i), 3);
+		vector_copy(vert->uv,
+	      (float *)(aimesh->mTextureCoords[0] + i), 2);
+		vector_copy(vert->norm, (float *)(aimesh->mNormals + i), 3);
 	}
 }
 
